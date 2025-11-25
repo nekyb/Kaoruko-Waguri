@@ -6,17 +6,19 @@ export default {
     async execute(ctx) {
         const userData = ctx.dbService.getUser(ctx.sender);
         const now = Date.now();
-        const cooldown = 86400000; 
+        const cooldown = 86400000;
+        const lastDaily = userData.economy?.lastDaily || 0;
 
-        if (now - (userData.lastDaily || 0) < cooldown) {
-            const timeLeft = Math.round((cooldown - (now - userData.lastDaily)) / 3600000);
+        if (now - lastDaily < cooldown) {
+            const timeLeft = Math.round((cooldown - (now - lastDaily)) / 3600000);
             return await ctx.reply(`ꕤ Ya reclamaste tu recompensa diaria. Vuelve en *${timeLeft}* horas.`);
         }
 
         const reward = 1000;
-        userData.coins += reward;
-        userData.lastDaily = now;
-        ctx.dbService.markDirty();
+        ctx.dbService.updateUser(ctx.sender, {
+            'economy.coins': (userData.economy?.coins || 0) + reward,
+            'economy.lastDaily': now
+        });
 
         await ctx.reply(`ꕥ ¡Recompensa diaria reclamada! +${reward} coins`);
     }

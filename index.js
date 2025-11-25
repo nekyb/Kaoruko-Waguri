@@ -1,179 +1,258 @@
-import QRCode from 'qrcode';
 import { Bot, LocalAuth } from '@imjxsx/wapi';
-import Logger from '@imjxsx/logger';
+import QRCode from 'qrcode';
 import fs from 'fs';
 import path from 'path';
-import { fileURLToPath } from 'url';
-import { DatabaseService } from './lib/DatabaseService.js';
-import { GachaService } from './lib/GachaService.js';
+import { fileURLToPath, pathToFileURL } from 'url';
+import DatabaseService from './lib/DatabaseService.js';
+import GachaService from './lib/GachaService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const logger = new Logger({ level: 'INFO' });
+// --- Global Error Handlers ---
+process.on('uncaughtException', (err) => {
+    console.error('🔥 Uncaught Exception:', err);
+});
 
-const uuid = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713';
-const auth = new LocalAuth(uuid, 'sessions');
-const account = { jid: '', pn: '', name: '' };
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
+// --- Services Initialization ---
 const dbService = new DatabaseService();
 const gachaService = new GachaService();
 
-global.db = dbService.load();
+global.db = await dbService.load();
 global.dbService = dbService;
 global.gachaService = gachaService;
-global.plugins = {};
+global.commandMap = new Map();
 
-gachaService.load();
+await gachaService.load();
 
-const botOwner = '573115434166@s.whatsapp.net';
-global.botOwner = botOwner;
+// --- Bot Configuration ---
+const UUID = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713';
+const auth = new LocalAuth(UUID, 'kaoruko-session');
+const account = { jid: '', pn: '', name: '' };
+const OWNER_JID = '573115434166@s.whatsapp.net';
+const PREFIX = '#';
 
-const bot = new Bot(uuid, auth, account, logger);
+const bot = new Bot(UUID, auth, account);
 
-global.commandMap = new Map(); 
+// --- Plugin Loader ---
+const pluginsDir = path.join(__dirname, 'plugins');
+const pluginFiles = fs.readdirSync(pluginsDir).filter(file => file.endsWith('.js'));
 
-const loadPlugins = async () => {
-    const pluginsPath = path.join(__dirname, 'plugins');
-    const files = fs.readdirSync(pluginsPath).filter(file => file.endsWith('.js'));
+console.log(`ꕤ Cargando ${pluginFiles.length} plugins...`);
 
-    console.log(`ꕤ Cargando ${files.length} plugins...`);
+for (const file of pluginFiles) {
+    try {
+        const filePath = pathToFileURL(path.join(pluginsDir, file)).href;
+        const plugin = await import(filePath);
+        const pluginExport = plugin.default;
 
-    for (const file of files) {
-        try {
-            const filePath = path.join(pluginsPath, file);
-            const module = await import(filePath);
-            const plugin = module.default;
-            
-            global.plugins[file] = plugin;
-            
-            if (plugin.commands) {
-                plugin.commands.forEach(cmd => {
-                    global.commandMap.set(cmd.toLowerCase(), plugin);
+        if (pluginExport && pluginExport.commands) {
+            for (const cmd of pluginExport.commands) {
+                global.commandMap.set(cmd, {
+                    execute: pluginExport.execute,
+                    before: pluginExport.before, // Store before handler
+                    plugin: file
                 });
             }
-            
             console.log(`ꕥ Plugin cargado: ${file}`);
-        } catch (error) {
-            console.error(`ꕤ Error cargando ${file}:`, error.message);
         }
+    } catch (error) {
+        console.error(`ꕤ Error cargando plugin ${file}:`, error.message);
     }
-};
+}
 
-await loadPlugins();
+// --- Event Handlers ---
+console.log('📌 Registrando event handlers...');
 
 bot.on('qr', async (qr) => {
-    qr = await QRCode.toString(qr, { type: 'terminal', small: true });
-    console.log('\n📱 Escanea el código QR para conectar:\n');
-    console.log(qr);
-    console.log('\n✨ Esperando escaneo del código QR...\n');
+    console.log('\n✨ Escanea este código QR con WhatsApp ✨\n');
+    const qrString = await QRCode.toString(qr, { type: 'terminal', small: true });
+    console.log(qrString);
 });
 
-bot.on('open', (accountInfo) => {
-    bot.logger.info(`✅ Conexión exitosa! Bot @${accountInfo.name} (${accountInfo.pn}) activo`);
+bot.on('open', (account) => {
+    console.log('🎉 EVENTO OPEN DISPARADO!');
+    console.log('✅ Conexión exitosa!');
+    console.log(`📱 Bot conectado: ${account.name || 'Kaoruko Waguri'}`);
+
+    console.log('🔍 Propiedades del bot:', Object.keys(bot));
+    console.log('🔍 bot.ws existe?', !!bot.ws);
+    console.log('🔍 bot.ws existe?', !!bot.ws);
+    console.log('🔍 bot.wset existe?', !!bot.wset);
+
+    console.log('📌 Configurando message handler...');
+
+    // Setup message handler after connection
+    bot.ws.ev.on('messages.upsert', async ({ messages, type }) => {
+        console.log(`📨 Received ${messages.length} messages, type: ${type}`);
+
+        for (const m of messages) {
+            try {
+                // Skip own messages
+                if (!m.message || m.key.fromMe) {
+                    continue;
+                }
+
+                const chatId = m.key.remoteJid;
+                let sender = m.key.participant || m.key.remoteJid;
+
+                // Convert LID to normal JID if needed
+                if (sender.includes('@lid')) {
+                    const lidMatch = sender.match(/^(\d+)/);
+                    if (lidMatch) {
+                        const lidNumber = lidMatch[1];
+                        sender = `${lidNumber}@s.whatsapp.net`;
+                    }
+                }
+
+                const isGroup = chatId.endsWith('@g.us');
+
+                // Extract text
+                const messageType = Object.keys(m.message)[0];
+                let text = '';
+                if (messageType === 'conversation') {
+                    text = m.message.conversation;
+                } else if (messageType === 'extendedTextMessage') {
+                    text = m.message.extendedTextMessage?.text || '';
+                } else if (messageType === 'imageMessage') {
+                    text = m.message.imageMessage?.caption || '';
+                } else if (messageType === 'videoMessage') {
+                    text = m.message.videoMessage?.caption || '';
+                }
+
+                // Build context EARLY
+                const ctx = {
+                    bot: {
+                        sendMessage: async (jid, content, options) => {
+                            return await bot.ws.sendMessage(jid, content, options);
+                        },
+                        sock: bot.ws,
+                        groupMetadata: async (jid) => {
+                            return await bot.ws.groupMetadata(jid);
+                        },
+                        groupParticipantsUpdate: async (jid, participants, action) => {
+                            return await bot.ws.groupParticipantsUpdate(jid, participants, action);
+                        }
+                    },
+                    msg: m,
+                    sender: sender,
+                    chatId: chatId,
+                    isGroup: isGroup,
+                    body: text,
+                    text: text, // Alias for compatibility
+                    args: [],
+                    userData: dbService.getUser(sender),
+                    dbService: dbService,
+                    gachaService: gachaService,
+                    from: {
+                        id: sender,
+                        jid: sender,
+                        name: m.pushName || 'Usuario'
+                    },
+                    reply: async (text, options = {}) => {
+                        return await bot.ws.sendMessage(chatId, { text, ...options }, { quoted: m });
+                    },
+                    replyWithAudio: async (url, options = {}) => {
+                        return await bot.ws.sendMessage(chatId, {
+                            audio: { url },
+                            mimetype: options.mimetype || 'audio/mpeg',
+                            fileName: options.fileName
+                        }, { quoted: m });
+                    },
+                    replyWithVideo: async (url, options = {}) => {
+                        return await bot.ws.sendMessage(chatId, {
+                            video: { url },
+                            caption: options.caption,
+                            fileName: options.fileName
+                        }, { quoted: m });
+                    },
+                    replyWithImage: async (url, options = {}) => {
+                        return await bot.ws.sendMessage(chatId, {
+                            image: { url },
+                            caption: options.caption
+                        }, { quoted: m });
+                    },
+                    prefix: PREFIX
+                };
+
+                // 1. Run 'before' handlers from all plugins
+                for (const [cmdName, cmdData] of global.commandMap) {
+                    if (cmdData.before && typeof cmdData.before === 'function') {
+                        try {
+                            // Import the plugin module to access the 'before' function directly if needed,
+                            // or rely on how we stored it. 
+                            // Since we stored 'execute', we might need to store 'before' too.
+                            // Let's assume we update the loader to store 'before'.
+                            await cmdData.before(ctx);
+                        } catch (err) {
+                            console.error(`Error in before handler for ${cmdName}:`, err);
+                        }
+                    }
+                }
+
+                // 2. Process Commands
+                const PREFIXES = ['/', '!', '#'];
+                const prefix = PREFIXES.find(p => text.startsWith(p));
+
+                if (!text || !prefix) {
+                    continue;
+                }
+
+                // Parse command and args
+                const args = text.slice(prefix.length).trim().split(/\s+/);
+                const commandName = args.shift()?.toLowerCase();
+                ctx.args = args;
+                ctx.command = commandName;
+
+                if (!commandName) continue;
+
+                // Find command
+                const commandData = global.commandMap.get(commandName);
+                if (!commandData) {
+                    continue;
+                }
+
+                // Execute plugin
+                console.log(`✨ Ejecutando comando: ${commandName} de ${ctx.from.name}`);
+                await commandData.execute(ctx);
+                console.log(`✅ Comando ${commandName} ejecutado exitosamente`);
+
+            } catch (error) {
+                console.error('ꕤ Error procesando mensaje:', error);
+                const chatId = m.key.remoteJid;
+                try {
+                    await bot.ws.sendMessage(chatId, {
+                        text: 'ꕤ Ocurrió un error al ejecutar el comando.'
+                    }, { quoted: m });
+                } catch { }
+            }
+        }
+    });
 });
 
 bot.on('close', (reason) => {
-    bot.logger.warn(`❌ Conexión cerrada: ${reason}`);
+    console.log('⚠️ Conexión cerrada:', reason);
 });
 
 bot.on('error', (err) => {
-    bot.logger.error(`⚠️ Error: ${err.message}`);
+    console.error('❌ Error del bot:', err);
 });
 
-bot.use(async (ctx, next) => {
-    try {
-        const sender = ctx.from?.jid || ctx.sender;
-        const chatId = ctx.chat?.jid || ctx.chatId;
-        
-        if (!sender || !chatId) {
-            return await next();
-        }
+// --- Graceful Shutdown ---
+const gracefulShutdown = async (signal) => {
+    console.log(`\n${signal} recibido. Cerrando gracefully...`);
+    await dbService.gracefulShutdown();
+    await gachaService.gracefulShutdown();
+    process.exit(0);
+};
 
-        const isGroup = chatId.endsWith('@g.us');
-        
-        const userData = dbService.getUser(sender);
-        userData.stats.messages++;
-        dbService.markDirty();
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-        if (isGroup) {
-            dbService.getGroup(chatId);
-        }
-
-        ctx.isGroup = isGroup;
-        ctx.sender = sender;
-        ctx.chatId = chatId;
-        ctx.userData = userData;
-        ctx.dbService = dbService;
-        ctx.gachaService = gachaService;
-        ctx.db = global.db;
-
-        await next();
-    } catch (error) {
-        bot.logger.error(`Error en middleware: ${error.message}`);
-    }
-});
-
-bot.command('ping', async (ctx) => {
-    await ctx.reply(`> ¡Pong! \`\`\`${bot.ping.toFixed(2)} ms\`\`\``);
-});
-
-bot.on('message', async (ctx) => {
-    try {
-        const body = ctx.body || ctx.text || '';
-        
-        if (!body) return;
-        
-        if (!body.startsWith('#') && !body.startsWith('/')) return;
-
-        const args = body.slice(1).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
-
-        console.log(`ꕤ Comando recibido: ${body[0]}${command} de ${ctx.sender.split('@')[0]}`);
-
-        if (ctx.userData) {
-            ctx.userData.stats.commands++;
-            dbService.markDirty();
-        }
-
-        const plugin = global.commandMap.get(command);
-        
-        if (plugin) {
-            try {
-                ctx.args = args;
-                ctx.command = command;
-                ctx.body = body;
-                await plugin.execute(ctx);
-            } catch (error) {
-                console.error(`ꕤ Error ejecutando plugin:`, error);
-                await ctx.reply('ꕤ Ocurrió un error al ejecutar el comando.');
-            }
-        }
-    } catch (error) {
-        bot.logger.error(`Error procesando mensaje: ${error.message}`);
-    }
-});
-
-bot.on('group.participant.add', async (ctx) => {
-    try {
-        const groupId = ctx.chat?.jid;
-        if (!groupId) return;
-
-        const groupSettings = dbService.getGroup(groupId).settings;
-        
-        if (groupSettings.welcome) {
-            for (const participant of ctx.participants) {
-                await bot.sock.sendMessage(groupId, {
-                    text: `ꕥ ¡Bienvenido/a @${participant.split('@')[0]} al grupo!`,
-                    mentions: [participant]
-                });
-            }
-        }
-    } catch (error) {
-        bot.logger.error(`Error en evento de grupo: ${error.message}`);
-    }
-});
-
+// --- Start Bot ---
+console.log('🚀 Iniciando bot con @imjxsx/wapi...');
 await bot.login('qr');
-
-console.log('\n✅ Bot iniciado correctamente\n');

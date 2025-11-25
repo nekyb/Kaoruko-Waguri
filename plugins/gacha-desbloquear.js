@@ -2,7 +2,7 @@ import { extractMentions } from '../lib/utils.js';
 
 export default {
     commands: ['desbloquear', 'unlock'],
-    
+
     async execute(ctx) {
         const mentions = extractMentions(ctx);
         const userData = ctx.userData;
@@ -31,9 +31,9 @@ export default {
         ctx.dbService.markDirty();
 
         await ctx.reply(
-            `⚠️ *Base desbloqueada*.\n` +
-            `🔓 @${target.split('@')[0]} ahora está vulnerable por 3 minutos.\n` +
-            `⏳ Podrás robar sus waifus hasta: *${new Date(targetData.desbloqueo).toLocaleString()}*`,
+            `> 𐚁 *Base desbloqueada*.\n` +
+            `⟡ @${target.split('@')[0]} ahora está vulnerable por 3 minutos.\n` +
+            `⟡ Podrás robar sus waifus hasta: *${new Date(targetData.desbloqueo).toLocaleString()}*`,
             { mentions: [target] }
         );
     }

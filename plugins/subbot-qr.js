@@ -2,22 +2,18 @@ import { jadibotManager } from '../lib/jadibot.js';
 
 export default {
     commands: ['qr'],
-    
-    async execute(sock, m, { chatId, sender, args }) {
-        if (!args[0]) {
-            return await sock.sendMessage(chatId, {
-                text: 'ꕤ Debes proporcionar un código.\nUso: #qr <código>'
-            });
+
+    async execute(ctx) {
+        if (!ctx.args[0]) {
+            return await ctx.reply('ꕤ Debes proporcionar un código.\nUso: #qr <código>');
         }
 
-        await sock.sendMessage(chatId, {
-            text: 'ꕤ Iniciando sub-bot, por favor espera...'
-        });
+        await ctx.reply('ꕤ Iniciando sub-bot, por favor espera...');
 
-        const result = await jadibotManager.startSubbot(args[0], chatId, sock);
-        
+        const result = await jadibotManager.startSubbot(ctx.args[0], ctx.chatId, ctx.bot);
+
         if (!result.success) {
-            await sock.sendMessage(chatId, { text: result.message });
+            await ctx.reply(result.message);
         }
     }
 };

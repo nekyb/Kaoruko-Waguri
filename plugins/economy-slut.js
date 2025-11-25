@@ -12,7 +12,7 @@ const ACTIVITIES = [
 
 export default {
     commands: ['slut'],
-    
+
     async execute(ctx) {
         if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
             return await ctx.reply('ꕤ El sistema de economía está desactivado en este grupo.');
@@ -28,9 +28,10 @@ export default {
             return await ctx.reply(`ꕤ Necesitas descansar.\nVuelve en: ${formatTime(cooldown)}`);
         }
 
-        userData.economy.lastSlut = Date.now();
-        userData.economy.coins += REWARD;
-        ctx.dbService.markDirty();
+        ctx.dbService.updateUser(ctx.sender, {
+            'economy.lastSlut': Date.now(),
+            'economy.coins': userData.economy.coins + REWARD
+        });
 
         const activity = getRandom(ACTIVITIES);
 

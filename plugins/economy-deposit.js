@@ -9,10 +9,11 @@ export default {
         }
 
         const userData = ctx.dbService.getUser(ctx.sender);
+        const economy = userData.economy || {};
 
         let amount;
         if (ctx.args[0].toLowerCase() === 'all') {
-            amount = userData.coins;
+            amount = economy.coins || 0;
         } else {
             amount = parseInt(ctx.args[0]);
         }
@@ -21,13 +22,14 @@ export default {
             return await ctx.reply('ꕤ La cantidad debe ser un número mayor a 0.');
         }
 
-        if (userData.coins < amount) {
+        if ((economy.coins || 0) < amount) {
             return await ctx.reply('ꕤ No tienes suficientes coins en tu billetera.');
         }
 
-        userData.coins -= amount;
-        userData.bank = (userData.bank || 0) + amount;
-        ctx.dbService.markDirty();
+        ctx.dbService.updateUser(ctx.sender, {
+            'economy.coins': (economy.coins || 0) - amount,
+            'economy.bank': (economy.bank || 0) + amount
+        });
 
         await ctx.reply(`ꕥ Depositaste *${amount}* coins en el banco.`);
     }

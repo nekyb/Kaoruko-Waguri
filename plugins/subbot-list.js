@@ -2,14 +2,12 @@ import { jadibotManager } from '../lib/jadibot.js';
 
 export default {
     commands: ['listjadibot', 'listbots'],
-    
-    async execute(sock, m, { chatId }) {
+
+    async execute(ctx) {
         const subbots = jadibotManager.getSubbots();
-        
+
         if (subbots.length === 0) {
-            return await sock.sendMessage(chatId, {
-                text: 'ꕤ No hay sub-bots activos actualmente.'
-            });
+            return await ctx.reply('ꕤ No hay sub-bots activos actualmente.');
         }
 
         let message = `ꕤ *Sub-Bots Activos* (${subbots.length})\n\n`;
@@ -17,8 +15,7 @@ export default {
             message += `${i + 1}. @${bot.userId.split('@')[0]}\n`;
         });
 
-        await sock.sendMessage(chatId, {
-            text: message,
+        await ctx.reply(message, {
             mentions: subbots.map(b => b.userId)
         });
     }

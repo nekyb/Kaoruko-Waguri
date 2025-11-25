@@ -6,12 +6,13 @@ export default {
 
     async execute(ctx) {
         const userData = ctx.dbService.getUser(ctx.sender);
+        const economy = userData.economy || {};
 
         await ctx.reply(
-            `ꕥ *Balance de ${userData.name || 'Usuario'}*\n\n` +
-            `💰 Billetera: ${userData.coins || 0} coins\n` +
-            `🏦 Banco: ${userData.bank || 0} coins\n` +
-            `💎 Total: ${(userData.coins || 0) + (userData.bank || 0)} coins`
+            `ꕥ *Balance de Usuario*\n\n` +
+            `⟡ Billetera: ${formatNumber(economy.coins || 0)} coins\n` +
+            `⟡ Banco: ${formatNumber(economy.bank || 0)} coins\n` +
+            `⟡ Total: ${formatNumber((economy.coins || 0) + (economy.bank || 0))} coins`
         );
     }
 };

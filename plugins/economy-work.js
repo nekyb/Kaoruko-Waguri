@@ -23,13 +23,13 @@ const JOBS = [
 
 export default {
     commands: ['work', 'w'],
-    
+
     async execute(ctx) {
         if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
             return await ctx.reply('ꕤ El sistema de economía está desactivado en este grupo.');
         }
 
-        const COOLDOWN = 1 * 60 * 60 * 1000;
+        const COOLDOWN = 1 * 60 * 1000; // 1 minute
         const REWARD = Math.floor(Math.random() * 300) + 100;
         const userData = ctx.userData;
         const cooldown = getCooldown(userData.economy.lastWork, COOLDOWN);
@@ -39,9 +39,12 @@ export default {
             );
         }
 
-        userData.economy.lastWork = Date.now();
-        userData.economy.coins += REWARD;
-        ctx.dbService.markDirty();
+        // Update user data in database
+        ctx.dbService.updateUser(ctx.sender, {
+            'economy.lastWork': Date.now(),
+            'economy.coins': userData.economy.coins + REWARD
+        });
+
         const job = getRandom(JOBS);
         await ctx.reply(
             `*ꕥ* ${job} y ganaste *${formatNumber(REWARD)}* coins.`

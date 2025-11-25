@@ -1,10 +1,10 @@
 export default {
     commands: ['help', 'menu'],
-    
+
     async execute(ctx) {
         const senderNumber = ctx.sender.split('@')[0];
         const username = ctx.from?.name || senderNumber;
-        
+
         const helpText = `Hola ${username}, soy *Kaoruko Waguri*, esta es la lista de comandos:
 
 ╭━━━ Powered By DeltaByte ━━━╮
@@ -46,6 +46,8 @@ export default {
 > ➥ Trabaja y gana coins.
 ✿ *#einfo* + [ @user ]
 > ➥ Mira la estadisticas de economia de alguien.
+✿ *#season*
+> ➥ Mira la temporada actual del pase de batalla.
 
  ୨୧ — Gacha
 ╰↷ Colecciona waifus y intercambialos.
@@ -72,6 +74,16 @@ export default {
 > ➥ Roba un personaje de otro usuario.
 ✿ *#resetwaifus*
 > ➥ Reinicia todas las waifus (solo owner).
+✿ *#delwaifu* + [ id ]
+> ➥ Elimina una waifu de tu colección.
+✿ *#vote*
+> ➥ Vota por tu waifu favorita.
+✿ *#wimage* + [ nombre ]
+> ➥ Busca una imagen de un personaje.
+✿ *#winfo* + [ nombre ]
+> ➥ Mira la información de un personaje.
+✿ *#wtop*
+> ➥ Mira el top de waifus más populares.
 
  ୨୧ — Descargas
 ╰↷ Comandos para descargar algun contenido de una plataforma.
@@ -84,8 +96,26 @@ export default {
 > ➥ Descarga un archivo de Mediafire.
 ✿ *#youtube* + [ link ]
 > ➥ Descarga un mp3 o un mp4 de youtube.
+✿ *#ytmp3* + [ link ]
+> ➥ Descarga audio de YouTube.
+✿ *#ytmp4* + [ link ]
+> ➥ Descarga video de YouTube.
 ✿ *#fb* + [ link ]
 > ➥ Descarga un video de Facebook.
+
+ ୨୧ — Buscadores
+╰↷ Encuentra lo que necesitas en la web.
+
+✿ *#googleimages* » *#gimg* + [ texto ]
+> ➥ Busca imágenes en Google.
+✿ *#pinterest* + [ texto ]
+> ➥ Busca imágenes en Pinterest.
+✿ *#spotify* » *#song* + [ texto ]
+> ➥ Busca y descarga música de Spotify.
+✿ *#tiktoksearch* + [ texto ]
+> ➥ Busca videos en TikTok.
+✿ *#wikipedia* » *#wiki* + [ texto ]
+> ➥ Busca información en Wikipedia.
 
  ୨୧ — Utilidades
 ╰↷ Comandos utiles 
@@ -94,6 +124,30 @@ export default {
 > ➥ Calcula la velocidad del bot.
 ✿ *#ai* » *ia* + [ texto ]
 > ➥ Consulta con Gemini.
+✿ *#sticker* » *#s*
+> ➥ Crea un sticker de una imagen o video.
+
+ ୨୧ — Subbot
+╰↷ Convierte tu número en un bot.
+
+✿ *#qr*
+> ➥ Obtén un código QR para vincularte.
+✿ *#code*
+> ➥ Obtén un código de emparejamiento.
+✿ *#list*
+> ➥ Lista los subbots activos.
+✿ *#stop*
+> ➥ Detén tu subbot.
+
+ ୨୧ — NSFW
+╰↷ Contenido para adultos (solo grupos permitidos).
+
+✿ *#hbikini*
+> ➥ Imágenes de chicas en bikini.
+✿ *#himages*
+> ➥ Imágenes hentai aleatorias.
+✿ *#pornvideo*
+> ➥ Videos porno aleatorios.
 
  ୨୧ — Administración
 ╰↷ Administra tu grupo y/o comunidad de manera mas sencilla
@@ -118,7 +172,7 @@ export default {
 ────୨ৎ────`;
 
         try {
-            await ctx.bot.sock.sendMessage(ctx.chatId, {
+            await ctx.bot.sendMessage(ctx.chatId, {
                 text: helpText,
                 contextInfo: {
                     isForwarded: true,
@@ -138,6 +192,7 @@ export default {
                 },
             });
         } catch (error) {
+            console.error('[DEBUG] Error sending help with metadata:', error);
             await ctx.reply(helpText);
         }
     }

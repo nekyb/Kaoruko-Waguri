@@ -1,20 +1,20 @@
 export default {
     commands: ['harem', 'miswaifu', 'coleccion'],
-    
+
     async execute(ctx) {
         const userData = ctx.userData;
         const gachaService = ctx.gachaService;
-        const userCharacters = gachaService.getByUser(ctx.sender);
+        const userCharacters = gachaService.getUserCharacters(ctx.sender);
 
         if (userCharacters.length === 0) {
             return await ctx.reply('ꕤ No tienes personajes aún.\nUsa #claim para obtener uno.');
         }
 
         let message = `ꕥ *Tu Harem* (${userCharacters.length} personajes)\n\n`;
-        
+
         const displayLimit = 25;
         const charactersToShow = userCharacters.slice(0, displayLimit);
-        
+
         charactersToShow.forEach((char, i) => {
             const rarity = Math.floor(parseInt(char.value || 0) / 400);
             const stars = 'ꕤ'.repeat(Math.min(rarity, 5));

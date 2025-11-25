@@ -1,14 +1,17 @@
 import { formatNumber } from '../lib/utils.js';
 
 export default {
-    commands: ['board', 'leaderboard', 'top'],
+    commands: ['board', 'leaderboard', 'top', 'baltop'],
 
     async execute(ctx) {
-        const users = Object.entries(ctx.dbService.db.users || {})
-            .map(([id, data]) => ({
-                id,
+        // Get all users from LocalDB
+        const allUsers = ctx.dbService.users.find({});
+
+        const users = allUsers
+            .map(data => ({
+                id: data.id,
                 name: data.name || 'Usuario',
-                total: (data.coins || 0) + (data.bank || 0)
+                total: (data.economy?.coins || 0) + (data.economy?.bank || 0)
             }))
             .filter(u => u.total > 0)
             .sort((a, b) => b.total - a.total)
@@ -18,13 +21,24 @@ export default {
             return await ctx.reply('ꕤ No hay usuarios con coins aún.');
         }
 
-        let message = 'ꕥ *Top 10 Más Ricos*\n\n';
+        let message = '🌸 *Top 10 Ricachones* 🌸\n';
+        message += '━━━━━━━━━━━━━━━━━━━━\n\n';
 
+        const mentions = [];
         users.forEach((user, i) => {
-            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-            message += `${medal} ${user.name}: 💎 ${user.total} coins\n`;
+            const medal = i === 0 ? '👑' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            const phoneNumber = user.id.split('@')[0].split(':')[0].replace(/\D/g, '');
+            console.log(`[DEBUG] Board - ID: ${user.id}, Phone: ${phoneNumber}`);
+            mentions.push(user.id);
+
+            message += `${medal} @${phoneNumber}\n`;
+            message += `   ✨ ${formatNumber(user.total)} coins\n`;
+            if (i < 3) message += '\n'; // Add extra space for top 3
         });
 
-        await ctx.reply(message);
+        message += '\n━━━━━━━━━━━━━━━━━━━━';
+        message += '\n💫 _Sigue esforzándote!_';
+
+        await ctx.reply(message, { mentions });
     }
 };

@@ -1,32 +1,67 @@
 import axios from 'axios';
 
+async function ytdlp(type, videoUrl) {
+    let command;
+
+    if (type === "audio") {
+        command = `-x --audio-format mp3 ${videoUrl}`;
+    } else if (type === "video") {
+        command = `-f 136+140 ${videoUrl}`;
+    } else {
+        throw new Error("Invalid type: use 'audio' or 'video'");
+    }
+
+    const encoded = encodeURIComponent(command);
+
+    const res = await axios.get(
+        `https://ytdlp.online/stream?command=${encoded}`,
+        { responseType: "stream" }
+    );
+
+    return new Promise((resolve, reject) => {
+        let downloadUrl = null;
+
+        res.data.on("data", chunk => {
+            const text = chunk.toString();
+            const match = text.match(/href="([^"]+\.(mp3|mp4|m4a|webm))"/);
+            if (match) downloadUrl = `https://ytdlp.online${match[1]}`;
+        });
+
+        res.data.on("end", () => {
+            if (!downloadUrl) reject("Download URL not found");
+            else resolve({ dl: downloadUrl });
+        });
+
+        res.data.on("error", reject);
+    });
+}
+
 export default {
-    commands: ['ytmp4'],
-    
+    commands: ['ytmp4', 'ytv'],
+
     async execute(ctx) {
+        if (!ctx.args[0]) {
+            return await ctx.reply(`ꕤ Por favor proporciona un enlace de YouTube.\n\n*Ejemplo:*\n${ctx.prefix}ytmp4 https://www.youtube.com/watch?v=example`);
+        }
+
+        const youtubeRegex = /^(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})(?:\S+)?$/;
+        if (!youtubeRegex.test(ctx.args[0])) {
+            return await ctx.reply(`ꕤ La URL proporcionada no es válida.`);
+        }
+
+        await ctx.reply('ꕥ Procesando tu video, por favor espera...');
+
         try {
-            if (ctx.args.length === 0) {
-                return await ctx.reply('ꕤ Proporciona un enlace de YouTube.');
-            }
+            const result = await ytdlp('video', ctx.args[0]);
 
-            const url = ctx.args[0];
-            const apiUrl = `https://api.delirius.store/download/ytmp4?url=${encodeURIComponent(url)}`;
-            const response = await axios.get(apiUrl, { timeout: 60000 });
-
-            if (!response.data || !response.data.download) {
-                return await ctx.reply('ꕤ No se pudo obtener el video.');
-            }
-
-            await ctx.replyWithVideo(response.data.download, {
-                fileName: `${response.data.title || 'video'}.mp4`,
-                caption: `ꕥ *YouTube MP4*\n\n✿ *Título:* ${response.data.title || 'Desconocido'}`
-            });
+            await ctx.bot.sendMessage(ctx.chatId, {
+                video: { url: result.dl },
+                caption: 'ꕥ Aquí tienes tu video!'
+            }, { quoted: ctx.msg });
 
         } catch (error) {
-            console.error('Error en comando ytmp4:', error);
-            await ctx.reply(
-                `ꕤ Error al descargar el video.`
-            );
+            console.error('YTDLP Plugin Error:', error);
+            await ctx.reply('ꕤ Error al descargar el video. El servicio puede estar caído o la URL es inválida.');
         }
     }
 };

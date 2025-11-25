@@ -2,7 +2,7 @@ import { getCooldown, formatTime } from '../lib/utils.js';
 
 export default {
     commands: ['claim', 'c'],
-    
+
     async execute(ctx) {
         const COOLDOWN = 3 * 60 * 60 * 1000;
         const userData = ctx.userData;
@@ -16,17 +16,17 @@ export default {
         }
 
         const character = gachaService.getRandom();
-        
+
         if (!character) {
             return await ctx.reply('ꕤ No hay personajes disponibles en este momento.');
         }
 
         userData.gacha.lastClaim = Date.now();
-        
+
         if (!userData.gacha.characters) {
             userData.gacha.characters = [];
         }
-        
+
         userData.gacha.characters.push({
             id: character.id,
             name: character.name,
@@ -34,7 +34,7 @@ export default {
         });
 
         try {
-            gachaService.claimCharacter(character.id, ctx.sender);
+            gachaService.claim(character.id, ctx.sender);
         } catch (error) {
             console.error('Error reclamando personaje:', error.message);
         }
