@@ -1,11 +1,12 @@
 export default {
     commands: ['wtop', 'topwaifus'],
-    
-    async execute(sock, m, { chatId }) {
-        const waifus = Object.entries(global.db.waifus || {})
-            .map(([name, data]) => ({ name, votes: data.votes || 0 }))
-            .filter(w => w.votes > 0)
-            .sort((a, b) => b.votes - a.votes)
+
+    async execute(ctx) {
+        const { bot, msg, chatId } = ctx;
+        const sock = bot.sock || bot;
+        const waifus = global.gachaService.characters
+            .filter(c => c.voteCount && c.voteCount > 0)
+            .sort((a, b) => b.voteCount - a.voteCount)
             .slice(0, 10);
 
         if (waifus.length === 0) {
@@ -15,10 +16,10 @@ export default {
         }
 
         let message = 'ꕥ *Top 10 Waifus*\n\n';
-        
+
         waifus.forEach((waifu, i) => {
             const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-            message += `${medal} ${waifu.name.charAt(0).toUpperCase() + waifu.name.slice(1)}: ❤️ ${waifu.votes} votos\n`;
+            message += `${medal} ${waifu.name}: ❤️ ${waifu.voteCount} votos\n`;
         });
 
         await sock.sendMessage(chatId, { text: message });

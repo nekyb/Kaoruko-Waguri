@@ -40,6 +40,8 @@ export default {
     commands: ['ytmp4', 'ytv'],
 
     async execute(ctx) {
+        const { streamManager, queueManager } = ctx;
+
         if (!ctx.args[0]) {
             return await ctx.reply(`ꕤ Por favor proporciona un enlace de YouTube.\n\n*Ejemplo:*\n${ctx.prefix}ytmp4 https://www.youtube.com/watch?v=example`);
         }
@@ -52,10 +54,16 @@ export default {
         await ctx.reply('ꕥ Procesando tu video, por favor espera...');
 
         try {
+            // Add to queue
+            await queueManager.addJob('downloads', { url: ctx.args[0], chatId: ctx.chatId });
+
             const result = await ytdlp('video', ctx.args[0]);
 
+            // Stream the video
+            const stream = await streamManager.getStream(result.dl);
+
             await ctx.bot.sendMessage(ctx.chatId, {
-                video: { url: result.dl },
+                video: { stream },
                 caption: 'ꕥ Aquí tienes tu video!'
             }, { quoted: ctx.msg });
 

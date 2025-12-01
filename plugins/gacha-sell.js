@@ -1,6 +1,6 @@
 export default {
     commands: ['sell', 'vender'],
-    
+
     async execute(ctx) {
         if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
             return await ctx.reply('ꕤ El sistema de economía está desactivado en este grupo.');
@@ -18,7 +18,7 @@ export default {
             return await ctx.reply(`ꕤ No se encontró ningún personaje con el ID: *${characterId}*`);
         }
 
-        if (character.user !== ctx.sender) {
+        if (character.owner !== ctx.sender) {
             return await ctx.reply('ꕤ Este personaje no te pertenece.');
         }
 
@@ -26,12 +26,12 @@ export default {
         const userData = ctx.userData;
 
         try {
-            gachaService.releaseCharacter(characterId);
+            gachaService.release(ctx.sender, characterId);
 
-            const charIndex = userData.gacha.characters.findIndex(c => c.id === characterId);
-            if (charIndex !== -1) {
-                userData.gacha.characters.splice(charIndex, 1);
-            }
+            // const charIndex = userData.gacha.characters.findIndex(c => c.id === characterId);
+            // if (charIndex !== -1) {
+            //     userData.gacha.characters.splice(charIndex, 1);
+            // }
 
             userData.economy.coins += sellPrice;
             ctx.dbService.markDirty();

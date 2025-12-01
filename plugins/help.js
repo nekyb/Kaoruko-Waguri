@@ -82,6 +82,10 @@ export default {
 > ➥ Busca una imagen de un personaje.
 ✿ *#winfo* + [ nombre ]
 > ➥ Mira la información de un personaje.
+✿ *#wvideo* + [ nombre ]
+> ➥ Mira un video de un personaje.
+✿ *#ainfo* + [ anime ]
+> ➥ Ver todos los personajes de un anime específico.
 ✿ *#wtop*
 > ➥ Mira el top de waifus más populares.
 
@@ -96,6 +100,8 @@ export default {
 > ➥ Descarga un archivo de Mediafire.
 ✿ *#youtube* + [ link ]
 > ➥ Descarga un mp3 o un mp4 de youtube.
+✿ *#play* + [ query/url ]
+> ➥ Descarga música o video de YouTube.
 ✿ *#ytmp3* + [ link ]
 > ➥ Descarga audio de YouTube.
 ✿ *#ytmp4* + [ link ]
@@ -112,6 +118,8 @@ export default {
 > ➥ Busca imágenes en Pinterest.
 ✿ *#spotify* » *#song* + [ texto ]
 > ➥ Busca y descarga música de Spotify.
+✿ *#soundcloud* + [ texto ]
+> ➥ Busca y descarga música de SoundCloud.
 ✿ *#tiktoksearch* + [ texto ]
 > ➥ Busca videos en TikTok.
 ✿ *#wikipedia* » *#wiki* + [ texto ]
@@ -124,8 +132,34 @@ export default {
 > ➥ Calcula la velocidad del bot.
 ✿ *#ai* » *ia* + [ texto ]
 > ➥ Consulta con Gemini.
+✿ *#gemini* + [ texto ]
+> ➥ Consulta con Gemini AI.
 ✿ *#sticker* » *#s*
 > ➥ Crea un sticker de una imagen o video.
+✿ *#toimg* » *#img*
+> ➥ Convierte un sticker en imagen.
+✿ *#suggest* + [ texto ]
+> ➥ Envía una sugerencia al administrador.
+✿ *#hd*
+> ➥ Mejora la calidad de una imagen (responde a imagen).
+✿ *#obtenerinfo* + [ @user ]
+> ➥ Obtiene información de JID de un usuario.
+✿ *#wanted* + [ @user ]
+> ➥ Crea un poster de "Se Busca".
+✿ *#speak* + [ texto ]
+> ➥ Convierte texto a voz (Adam).
+
+ ୨୧ — Diversión
+╰↷ Comandos para interactuar.
+
+✿ *#sleep* + [ @user ]
+> ➥ Duerme o toma una siesta con alguien.
+✿ *#hug* + [ @user ]
+> ➥ Abraza a alguien.
+✿ *#cry* + [ @user ]
+> ➥ Llora por alguien o algo.
+✿ *#kiss* + [ @user ]
+> ➥ Besa a alguien.
 
  ୨୧ — Subbot
 ╰↷ Convierte tu número en un bot.
@@ -134,6 +168,8 @@ export default {
 > ➥ Obtén un código QR para vincularte.
 ✿ *#code*
 > ➥ Obtén un código de emparejamiento.
+✿ *#jadibot* + [ numero ]
+> ➥ Obtén un código de 8 dígitos para vincularte.
 ✿ *#list*
 > ➥ Lista los subbots activos.
 ✿ *#stop*
@@ -168,6 +204,8 @@ export default {
 > ➥ Activa o desactiva la funcion de bienvenida.
 ✿ *#alertas* + [ on/off ]
 > ➥ Activa o desactiva el sistema de alertas.
+✿ *#kickall*
+> ➥ Elimina a todos los no-admins del grupo.
 
 ────୨ৎ────`;
 

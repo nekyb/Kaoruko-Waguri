@@ -2,34 +2,58 @@ import { loadLinks, getRandomLink, downloadMedia } from '../lib/nsfw.js';
 
 export default {
     commands: ['himages'],
-    
-    async execute(sock, m, { chatId, isGroup }) {
-        if (isGroup && !global.db.groups[chatId]?.settings?.porn) {
-            return await sock.sendMessage(chatId, { text: 'ꕤ Los comandos NSFW están desactivados en este grupo.' });
+
+    async execute(ctx) {
+        console.log('[DEBUG himages] Iniciando execute, ctx:', typeof ctx);
+        const { chatId, isGroup, bot } = ctx;
+        console.log('[DEBUG himages] chatId:', chatId, 'isGroup:', isGroup, 'bot:', typeof bot);
+        const conn = bot?.sock;
+        console.log('[DEBUG himages] conn:', typeof conn);
+
+        if (!conn) {
+            console.log('[DEBUG himages] ERROR: No hay conexión');
+            return ctx.reply('❌ Error: Conexión no disponible.');
+        }
+
+        console.log('[DEBUG himages] Verificando NSFW settings...');
+        if (isGroup && !global.db.groups[chatId]?.settings?.nsfw) {
+            console.log('[DEBUG himages] NSFW desactivado para grupo:', chatId);
+            return await ctx.reply('ꕤ Los comandos NSFW están desactivados en este grupo.');
         }
 
         try {
-            await sock.sendMessage(chatId, { text: 'ꕤ Cargando imagen hentai...' });
-            
+            console.log('[DEBUG himages] Enviando mensaje de carga...');
+            await ctx.reply('ꕤ Cargando imagen hentai...');
+
+            console.log('[DEBUG himages] Cargando enlaces...');
             const links = await loadLinks('hentai');
+            console.log('[DEBUG himages] Enlaces cargados:', links.length);
             if (links.length === 0) {
-                return await sock.sendMessage(chatId, { text: 'ꕤ Error al cargar la base de datos de imágenes.' });
+                console.log('[DEBUG himages] ERROR: No hay enlaces disponibles');
+                return await ctx.reply('ꕤ Error al cargar la base de datos de imágenes.');
             }
 
+            console.log('[DEBUG himages] Obteniendo enlace aleatorio...');
             const randomUrl = getRandomLink(links);
+            console.log('[DEBUG himages] URL seleccionada:', randomUrl);
             const buffer = await downloadMedia(randomUrl);
-            
+            console.log('[DEBUG himages] Buffer descargado:', typeof buffer, buffer ? buffer.length : 0);
+
             if (!buffer) {
-                return await sock.sendMessage(chatId, { text: 'ꕤ Error al descargar la imagen.' });
+                console.log('[DEBUG himages] ERROR: Buffer vacío');
+                return await ctx.reply('ꕤ Error al descargar la imagen.');
             }
 
-            await sock.sendMessage(chatId, {
+            console.log('[DEBUG himages] Enviando imagen...');
+            await conn.sendMessage(chatId, {
                 image: buffer,
                 caption: 'ꕥ Imagen hentai aleatoria'
             });
+            console.log('[DEBUG himages] ✓ Imagen enviada correctamente');
         } catch (error) {
-            console.error('Error en himages:', error);
-            await sock.sendMessage(chatId, { text: 'ꕤ Ocurrió un error al procesar la solicitud.' });
+            console.error('[DEBUG himages] ✗ ERROR CRÍTICO:', error);
+            console.error('[DEBUG himages] Error stack:', error.stack);
+            await ctx.reply('ꕤ Ocurrió un error al procesar la solicitud.');
         }
     }
 };

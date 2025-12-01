@@ -4,7 +4,7 @@ export default {
     commands: ['claim', 'c'],
 
     async execute(ctx) {
-        const COOLDOWN = 3 * 60 * 60 * 1000;
+        const COOLDOWN = 30 * 60 * 1000;
         const userData = ctx.userData;
         const gachaService = ctx.gachaService;
         const cooldown = getCooldown(userData.gacha.lastClaim, COOLDOWN);
@@ -15,14 +15,19 @@ export default {
             );
         }
 
-        const character = gachaService.getRandom();
-
-        if (!character) {
-            return await ctx.reply('ꕤ No hay personajes disponibles en este momento.');
+        const rolledId = userData.gacha.rolled;
+        if (!rolledId) {
+            return await ctx.reply('ꕤ Primero debes girar la ruleta con #rollwaifu (#rw) para obtener un personaje.');
         }
 
-        userData.gacha.lastClaim = Date.now();
+        const character = gachaService.getById(rolledId);
+        if (!character) {
+            delete userData.gacha.rolled;
+            return await ctx.reply('ꕤ El personaje que giraste ya no está disponible.');
+        }
 
+        delete userData.gacha.rolled;
+        userData.gacha.lastClaim = Date.now();
         if (!userData.gacha.characters) {
             userData.gacha.characters = [];
         }
@@ -30,26 +35,21 @@ export default {
         userData.gacha.characters.push({
             id: character.id,
             name: character.name,
+            source: character.source,
+            value: character.value,
+            img: character.img,
             claimedAt: Date.now()
         });
 
         try {
             gachaService.claim(character.id, ctx.sender);
         } catch (error) {
-            console.error('Error reclamando personaje:', error.message);
+            console.error('Error reclamando personaje en GachaService:', error.message);
         }
 
         ctx.dbService.markDirty();
 
-        const rarity = Math.floor(parseInt(character.value) / 400);
-        const stars = 'ꕤ'.repeat(Math.min(rarity, 5));
-
-        let message = `ꕥ *¡Nuevo Personaje!*\n\n`;
-        message += `ꕤ ${character.name}\n`;
-        message += `ꕤ ${character.source || 'Desconocido'}\n`;
-        message += `${stars} Valor: ${character.value}\n`;
-        message += `🆔 ID: ${character.id}\n\n`;
-        message += `¡Ha sido añadido a tu harem!`;
+        const message = `ꕥ Has reclamado a *${character.name}* con éxito.`;
 
         if (character.img && character.img.length > 0) {
             try {

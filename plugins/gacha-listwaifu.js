@@ -1,6 +1,6 @@
 export default {
     commands: ['listawaifus', 'listwaifus'],
-    
+
     async execute(ctx) {
         const gachaService = ctx.gachaService;
         const characters = gachaService.getAll();
@@ -27,7 +27,7 @@ export default {
         pageCharacters.forEach((c) => {
             listMessage += `• Nombre: *${c.name}*\n`;
             listMessage += `• ID: ${c.id}\n`;
-            listMessage += `• Dueño: ${c.user ? c.user.split('@')[0] : 'Nadie'}\n`;
+            listMessage += `• Dueño: ${c.owner ? c.owner.split('@')[0] : 'Nadie'}\n`;
             listMessage += `• Valor: ${c.value || 0}\n\n`;
         });
 

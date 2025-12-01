@@ -3,8 +3,10 @@ import axios from 'axios';
 
 export default {
     commands: ['mediafire', 'mf', 'mfdl'],
-    
+
     async execute(ctx) {
+        const { streamManager, queueManager, cacheManager } = ctx;
+
         try {
             if (ctx.args.length === 0) {
                 return await ctx.reply(
@@ -18,10 +20,14 @@ export default {
             if (!url.includes('mediafire.com')) {
                 return await ctx.reply('《✧》 Por favor ingresa un link válido de MediaFire.');
             }
-
+            const job = await queueManager.addJob('downloads', { url, chatId: ctx.chatId });
             const apiUrl = `https://delirius-apiofc.vercel.app/download/mediafire?url=${encodeURIComponent(url)}`;
-            const response = await axios.get(apiUrl, { timeout: 30000 });
-            const data = response.data;
+            let data = cacheManager.get(apiUrl);
+            if (!data) {
+                const response = await axios.get(apiUrl, { timeout: 30000 });
+                data = response.data;
+                cacheManager.set(apiUrl, data, 60 * 60)
+            }
 
             if (!data || !data.data || !data.data[0]) {
                 return await ctx.reply('《✧》 No se pudo obtener información del enlace.');
@@ -40,35 +46,21 @@ export default {
                 `║\n` +
                 `╚═════════════════╝`;
 
-            const fileResponse = await axios.get(file.link, {
-                responseType: 'arraybuffer',
-                timeout: 60000,
-                maxContentLength: 100 * 1024 * 1024
-            });
-
-            const buffer = Buffer.from(fileResponse.data);
+            const stream = await streamManager.getStream(file.link);
+            const messageOptions = {
+                caption: caption,
+                fileName: file.nama || 'archivo',
+                mimetype: file.mime || 'application/octet-stream'
+            };
 
             if (file.mime?.includes('image')) {
-                await ctx.replyWithImage(buffer, {
-                    caption: caption,
-                    fileName: file.nama || 'archivo'
-                });
+                await ctx.bot.sendMessage(ctx.chatId, { image: { stream }, ...messageOptions }, { quoted: ctx.msg });
             } else if (file.mime?.includes('video')) {
-                await ctx.replyWithVideo(buffer, {
-                    caption: caption,
-                    fileName: file.nama || 'video.mp4'
-                });
+                await ctx.bot.sendMessage(ctx.chatId, { video: { stream }, ...messageOptions }, { quoted: ctx.msg });
             } else if (file.mime?.includes('audio')) {
-                await ctx.replyWithAudio(buffer, {
-                    caption: caption,
-                    fileName: file.nama || 'audio.mp3'
-                });
+                await ctx.bot.sendMessage(ctx.chatId, { audio: { stream }, ...messageOptions }, { quoted: ctx.msg });
             } else {
-                await ctx.replyWithDocument(buffer, {
-                    caption: caption,
-                    fileName: file.nama || 'archivo',
-                    mimetype: file.mime || 'application/octet-stream'
-                });
+                await ctx.bot.sendMessage(ctx.chatId, { document: { stream }, ...messageOptions }, { quoted: ctx.msg });
             }
 
         } catch (error) {

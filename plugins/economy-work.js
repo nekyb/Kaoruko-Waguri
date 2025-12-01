@@ -29,7 +29,7 @@ export default {
             return await ctx.reply('ꕤ El sistema de economía está desactivado en este grupo.');
         }
 
-        const COOLDOWN = 1 * 60 * 1000; // 1 minute
+        const COOLDOWN = 1 * 60 * 1000;
         const REWARD = Math.floor(Math.random() * 300) + 100;
         const userData = ctx.userData;
         const cooldown = getCooldown(userData.economy.lastWork, COOLDOWN);
@@ -39,7 +39,6 @@ export default {
             );
         }
 
-        // Update user data in database
         ctx.dbService.updateUser(ctx.sender, {
             'economy.lastWork': Date.now(),
             'economy.coins': userData.economy.coins + REWARD

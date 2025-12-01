@@ -1,7 +1,7 @@
 import { formatNumber } from '../lib/utils.js';
 
 export default {
-    commands: ['deposit', 'dep', 'depositar'],
+    commands: ['deposit', 'dep', 'depositar', 'd'],
 
     async execute(ctx) {
         if (ctx.args.length === 0) {

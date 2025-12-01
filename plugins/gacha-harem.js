@@ -4,7 +4,7 @@ export default {
     async execute(ctx) {
         const userData = ctx.userData;
         const gachaService = ctx.gachaService;
-        const userCharacters = gachaService.getUserCharacters(ctx.sender);
+        const userCharacters = userData.gacha?.characters || [];
 
         if (userCharacters.length === 0) {
             return await ctx.reply('ꕤ No tienes personajes aún.\nUsa #claim para obtener uno.');
@@ -19,9 +19,9 @@ export default {
             const rarity = Math.floor(parseInt(char.value || 0) / 400);
             const stars = 'ꕤ'.repeat(Math.min(rarity, 5));
             message += `${i + 1}. ${char.name}\n`;
-            message += `   📺 ${char.source || 'Desconocido'}\n`;
+            message += `   𖣂 ${char.source || 'Desconocido'}\n`;
             message += `   ${stars} Valor: ${char.value}\n`;
-            message += `   🆔 ID: ${char.id}\n\n`;
+            message += `   𖣂 ID: ${char.id}\n\n`;
         });
 
         if (userCharacters.length > displayLimit) {
@@ -29,7 +29,7 @@ export default {
         }
 
         const totalValue = userCharacters.reduce((sum, char) => sum + parseInt(char.value || 0), 0);
-        message += `💰 Valor total: ${totalValue.toLocaleString()}`;
+        message += `✧ Valor total: ${totalValue.toLocaleString()}`;
 
         await ctx.reply(message);
     }

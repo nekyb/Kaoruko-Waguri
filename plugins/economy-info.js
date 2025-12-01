@@ -3,7 +3,7 @@ import { formatNumber, extractMentions } from '../lib/utils.js';
 
 export default {
     commands: ['einfo'],
-    
+
     async execute(ctx) {
         if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
             return await ctx.reply('ꕤ El sistema de economía está desactivado en este grupo.');
@@ -18,11 +18,11 @@ export default {
 
         const message = `ꕥ *Estadísticas de Economía*\n\n` +
             `Usuario: @${target.split('@')[0]}\n\n` +
-            `ꕤ Coins: ${formatNumber(userData.economy.coins)}\n` +
-            `ꕥ Banco: ${formatNumber(userData.economy.bank)}\n` +
-            `💵 Total: ${formatNumber(total)}\n\n` +
-            `📈 Mensajes enviados: ${formatNumber(stats?.messages || 0)}\n` +
-            `ꕥ Comandos usados: ${formatNumber(stats?.commands || 0)}`;
+            `⟡ Coins: ${formatNumber(userData.economy.coins)}\n` +
+            `⟡ Banco: ${formatNumber(userData.economy.bank)}\n` +
+            `⟡ Total: ${formatNumber(total)}\n\n` +
+            `⟡ Mensajes enviados: ${formatNumber(stats?.messages || 0)}\n` +
+            `⟡ Comandos usados: ${formatNumber(stats?.commands || 0)}`;
 
         await ctx.reply(message, { mentions: [target] });
     }

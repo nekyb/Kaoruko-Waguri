@@ -1,41 +1,55 @@
-const WAIFUS_INFO = {
-    'asuna': { name: 'Asuna', series: 'Sword Art Online', rarity: 5, description: 'La heroína principal de SAO' },
-    'rem': { name: 'Rem', series: 'Re:Zero', rarity: 5, description: 'Una de las sirvientas gemelas' },
-    'zero two': { name: 'Zero Two', series: 'Darling in the FranXX', rarity: 5, description: 'La piloto híbrida' },
-    'mikasa': { name: 'Mikasa', series: 'Attack on Titan', rarity: 4, description: 'Soldado de élite' },
-    'hinata': { name: 'Hinata', series: 'Naruto', rarity: 4, description: 'Heredera del clan Hyuga' },
-    'nezuko': { name: 'Nezuko', series: 'Demon Slayer', rarity: 5, description: 'La hermana demonio de Tanjiro' }
-};
-
 export default {
-    commands: ['winfo'],
-    
-    async execute(sock, m, { chatId, args }) {
+    commands: ['winfo', 'waifuinfo'],
+    tags: ['gacha'],
+    help: ['winfo <nombre>'],
+
+    async execute(ctx) {
+        const { args, gachaService } = ctx;
+
         if (args.length === 0) {
-            return await sock.sendMessage(chatId, {
-                text: 'ꕤ Debes especificar el nombre del personaje.\nUso: #winfo <personaje>'
-            });
+            return await ctx.reply('ꕤ Debes especificar el nombre del personaje.\nUso: #winfo <personaje>');
         }
 
-        const charName = args.join(' ').toLowerCase();
-        const info = WAIFUS_INFO[charName];
+        const query = args.join(' ').toLowerCase();
+        const character = gachaService.characters.find(c =>
+            c.name.toLowerCase().includes(query) ||
+            (c.alias && c.alias.toLowerCase().includes(query))
+        );
 
-        if (!info) {
-            return await sock.sendMessage(chatId, {
-                text: 'ꕤ Personaje no encontrado en la base de datos.'
-            });
+        if (!character) {
+            return await ctx.reply('ꕤ Personaje no encontrado en la base de datos.');
         }
 
-        const stars = 'ꕤ'.repeat(info.rarity);
-        const votes = global.db.waifus?.[charName]?.votes || 0;
+        const rarity = Math.floor(parseInt(character.value || 0) / 400);
+        const stars = '⭐'.repeat(Math.min(rarity, 5)) || '⭐';
 
-        await sock.sendMessage(chatId, {
-            text: `ꕥ *Información del Personaje*\n\n` +
-                `ꕤ Nombre: ${info.name}\n` +
-                `ꕤ Serie: ${info.series}\n` +
-                `${stars} Rareza: ${info.rarity}/5\n` +
-                `📖 ${info.description}\n` +
-                `❤️ Votos: ${votes}`
-        });
+        let ownerInfo = 'Nadie';
+        if (character.owner) {
+            ownerInfo = `@${character.owner.split('@')[0]}`;
+        }
+
+        let message = `ꕥ *Información del Personaje*\n\n`;
+        message += `ꕤ *Nombre:* ${character.name}\n`;
+        message += `ꕤ *Serie:* ${character.source || 'Desconocido'}\n`;
+        message += `ꕤ *Rareza:* ${stars} (${character.value})\n`;
+        message += `ꕤ *ID:* ${character.id}\n`;
+        message += `ꕤ *Dueño:* ${ownerInfo}\n`;
+
+        if (character.gender) {
+            message += `ꕤ *Género:* ${character.gender}\n`;
+        }
+
+        const imageUrl = character.img && character.img.length > 0 ? character.img[0] : null;
+
+        if (imageUrl) {
+            await ctx.replyWithImage(imageUrl, {
+                caption: message,
+                mentions: character.owner ? [character.owner] : []
+            });
+        } else {
+            await ctx.reply(message, {
+                mentions: character.owner ? [character.owner] : []
+            });
+        }
     }
 };

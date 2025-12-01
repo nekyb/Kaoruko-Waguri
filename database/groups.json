@@ -1,0 +1,34 @@
+[
+  {
+    "id": "120363425971920781@g.us",
+    "settings": {
+      "welcome": false,
+      "antilink": false,
+      "economy": true,
+      "nsfw": false
+    },
+    "alerts": [],
+    "stats": {
+      "messages": 0
+    },
+    "__uuid": "fe7756af-e3b1-46ba-b4e3-ad627ac43413",
+    "updatedAt": "2025-11-25T02:37:17.837Z",
+    "createdAt": "2025-11-25T02:37:17.837Z"
+  },
+  {
+    "id": "120363403874960157@g.us",
+    "settings": {
+      "welcome": false,
+      "antilink": false,
+      "economy": true,
+      "nsfw": false
+    },
+    "alerts": [],
+    "stats": {
+      "messages": 0
+    },
+    "__uuid": "5e32ad7a-3f5a-4626-9743-d234f49bd87c",
+    "updatedAt": "2025-11-30T21:08:39.406Z",
+    "createdAt": "2025-11-30T21:08:39.406Z"
+  }
+]

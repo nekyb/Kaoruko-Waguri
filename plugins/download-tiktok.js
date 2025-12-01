@@ -30,7 +30,6 @@ export default {
                 }
 
                 if (data.images?.length) {
-                    // Es un carrusel de imágenes
                     for (let index = 0; index < data.images.length; index++) {
                         const imageUrl = data.images[index];
                         const caption = index === 0 ?
@@ -43,7 +42,6 @@ export default {
                         });
                     }
                 } else if (data.play) {
-                    // Es un video
                     const caption = `《✧》 *TikTok Download*\n\n` +
                         `✿ *Título:* ${data.title || 'Sin título'}\n\n` +
                         `_Powered By DeltaByte_`;

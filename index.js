@@ -5,6 +5,9 @@ import path from 'path';
 import { fileURLToPath, pathToFileURL } from 'url';
 import DatabaseService from './lib/DatabaseService.js';
 import GachaService from './lib/GachaService.js';
+import StreamManager from './lib/StreamManager.js';
+import QueueManager from './lib/QueueManager.js';
+import CacheManager from './lib/CacheManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -21,11 +24,21 @@ process.on('unhandledRejection', (reason, promise) => {
 // --- Services Initialization ---
 const dbService = new DatabaseService();
 const gachaService = new GachaService();
+const streamManager = new StreamManager();
+const queueManager = new QueueManager();
+const cacheManager = new CacheManager();
 
 global.db = await dbService.load();
 global.dbService = dbService;
 global.gachaService = gachaService;
+global.streamManager = streamManager;
+global.queueManager = queueManager;
+global.cacheManager = cacheManager;
+global.streamManager = streamManager;
+global.queueManager = queueManager;
+global.cacheManager = cacheManager;
 global.commandMap = new Map();
+global.beforeHandlers = [];
 
 await gachaService.load();
 
@@ -51,10 +64,17 @@ for (const file of pluginFiles) {
         const pluginExport = plugin.default;
 
         if (pluginExport && pluginExport.commands) {
+            // Optimization: Store before handler separately
+            if (pluginExport.before && typeof pluginExport.before === 'function') {
+                global.beforeHandlers.push({
+                    plugin: file,
+                    handler: pluginExport.before
+                });
+            }
+
             for (const cmd of pluginExport.commands) {
                 global.commandMap.set(cmd, {
                     execute: pluginExport.execute,
-                    before: pluginExport.before, // Store before handler
                     plugin: file
                 });
             }
@@ -79,16 +99,8 @@ bot.on('open', (account) => {
     console.log('✅ Conexión exitosa!');
     console.log(`📱 Bot conectado: ${account.name || 'Kaoruko Waguri'}`);
 
-    console.log('🔍 Propiedades del bot:', Object.keys(bot));
-    console.log('🔍 bot.ws existe?', !!bot.ws);
-    console.log('🔍 bot.ws existe?', !!bot.ws);
-    console.log('🔍 bot.wset existe?', !!bot.wset);
-
-    console.log('📌 Configurando message handler...');
-
-    // Setup message handler after connection
     bot.ws.ev.on('messages.upsert', async ({ messages, type }) => {
-        console.log(`📨 Received ${messages.length} messages, type: ${type}`);
+        // console.log(`📨 Received ${messages.length} messages, type: ${type}`);
 
         for (const m of messages) {
             try {
@@ -148,6 +160,9 @@ bot.on('open', (account) => {
                     userData: dbService.getUser(sender),
                     dbService: dbService,
                     gachaService: gachaService,
+                    streamManager: streamManager,
+                    queueManager: queueManager,
+                    cacheManager: cacheManager,
                     from: {
                         id: sender,
                         jid: sender,
@@ -176,21 +191,25 @@ bot.on('open', (account) => {
                             caption: options.caption
                         }, { quoted: m });
                     },
+                    download: async (message) => {
+                        // Import dynamically to avoid top-level dependency issues if possible, 
+                        // or assume it's available since we saw it in node_modules
+                        const { downloadMediaMessage } = await import('@whiskeysockets/baileys');
+                        return await downloadMediaMessage(message || m, 'buffer', {}, {
+                            logger: console,
+                            reuploadRequest: bot.ws.updateMediaMessage
+                        });
+                    },
                     prefix: PREFIX
                 };
 
                 // 1. Run 'before' handlers from all plugins
-                for (const [cmdName, cmdData] of global.commandMap) {
-                    if (cmdData.before && typeof cmdData.before === 'function') {
-                        try {
-                            // Import the plugin module to access the 'before' function directly if needed,
-                            // or rely on how we stored it. 
-                            // Since we stored 'execute', we might need to store 'before' too.
-                            // Let's assume we update the loader to store 'before'.
-                            await cmdData.before(ctx);
-                        } catch (err) {
-                            console.error(`Error in before handler for ${cmdName}:`, err);
-                        }
+                // Optimization: Use pre-calculated array
+                for (const { handler, plugin } of global.beforeHandlers) {
+                    try {
+                        await handler(ctx);
+                    } catch (err) {
+                        console.error(`Error in before handler for ${plugin}:`, err);
                     }
                 }
 
@@ -217,9 +236,9 @@ bot.on('open', (account) => {
                 }
 
                 // Execute plugin
-                console.log(`✨ Ejecutando comando: ${commandName} de ${ctx.from.name}`);
+                // console.log(`✨ Ejecutando comando: ${commandName} de ${ctx.from.name}`);
                 await commandData.execute(ctx);
-                console.log(`✅ Comando ${commandName} ejecutado exitosamente`);
+                // console.log(`✅ Comando ${commandName} ejecutado exitosamente`);
 
             } catch (error) {
                 console.error('ꕤ Error procesando mensaje:', error);
