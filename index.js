@@ -1,128 +1,143 @@
-import { Bot, LocalAuth } from '@imjxsx/wapi'
-import QRCode from 'qrcode'
-import fs from 'fs'
-import path from 'path'
-import { fileURLToPath, pathToFileURL } from 'url'
-import pino from 'pino'
+import { Bot, LocalAuth } from '@imjxsx/wapi';
+import QRCode from 'qrcode';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+import DatabaseService from './lib/DatabaseService.js';
+import GachaService from './lib/GachaService.js';
+import StreamManager from './lib/StreamManager.js';
+import QueueManager from './lib/QueueManager.js';
+import CacheManager from './lib/CacheManager.js';
+import { MessageHandler } from './lib/MessageHandler.js';
+import { WelcomeHandler } from './lib/WelcomeHandler.js';
 
-import DatabaseService from './lib/DatabaseService.js'
-import GachaService from './lib/GachaService.js'
-import StreamManager from './lib/StreamManager.js'
-import QueueManager from './lib/QueueManager.js'
-import CacheManager from './lib/CacheManager.js'
-import { MessageHandler } from './lib/MessageHandler.js'
-import { WelcomeHandler } from './lib/WelcomeHandler.js'
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// --- Global Error Handlers ---
+process.on('uncaughtException', (err) => {
+    console.error('🔥 Uncaught Exception:', err);
+});
 
-const logger = pino({ level: 'fatal' })
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('🔥 Unhandled Rejection at:', promise, 'reason:', reason);
+});
 
-process.on('uncaughtException', err => console.error(err))
-process.on('unhandledRejection', (r, p) => console.error(r))
+// --- Services Initialization ---
+const dbService = new DatabaseService();
+const gachaService = new GachaService();
+const streamManager = new StreamManager();
+const queueManager = new QueueManager();
+const cacheManager = new CacheManager();
 
-const dbService = new DatabaseService()
-const gachaService = new GachaService()
-const streamManager = new StreamManager()
-const queueManager = new QueueManager()
-const cacheManager = new CacheManager()
+global.db = await dbService.load();
+global.dbService = dbService;
+global.gachaService = gachaService;
+global.streamManager = streamManager;
+global.queueManager = queueManager;
+global.cacheManager = cacheManager;
+global.streamManager = streamManager;
+global.queueManager = queueManager;
+global.cacheManager = cacheManager;
+global.commandMap = new Map();
+global.beforeHandlers = [];
 
-global.db = await dbService.load()
-global.dbService = dbService
-global.gachaService = gachaService
-global.streamManager = streamManager
-global.queueManager = queueManager
-global.cacheManager = cacheManager
-global.commandMap = new Map()
-global.beforeHandlers = []
+// Initialize Handlers
+const messageHandler = new MessageHandler(dbService, gachaService, streamManager, queueManager, cacheManager);
+const welcomeHandler = new WelcomeHandler(dbService);
+global.messageHandler = messageHandler;
 
-const messageHandler = new MessageHandler(
-  dbService,
-  gachaService,
-  streamManager,
-  queueManager,
-  cacheManager
-)
+await gachaService.load();
 
-const welcomeHandler = new WelcomeHandler(dbService)
-global.messageHandler = messageHandler
+// --- Bot Configuration ---
+const UUID = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713';
+const auth = new LocalAuth(UUID, 'kaoruko-session');
+const account = { jid: '', pn: '', name: '' };
+const OWNER_JID = '573115434166@s.whatsapp.net';
+const PREFIX = '#';
 
-await gachaService.load()
+const bot = new Bot(UUID, auth, account);
 
-const UUID = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713'
-const sessionDir = 'kaoruko-session'
-const auth = new LocalAuth(UUID, sessionDir)
+// --- Plugin Loader ---
+const pluginsDir = path.join(__dirname, 'plugins');
+const pluginFiles = fs.readdirSync(pluginsDir).filter(file => file.endsWith('.js'));
 
-const account = { jid: '', pn: '', name: '' }
-
-const bot = new Bot(UUID, auth, account, { logger })
-
-const pluginsDir = path.join(__dirname, 'plugins')
-const pluginFiles = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'))
+console.log(`ꕤ Cargando ${pluginFiles.length} plugins...`);
 
 for (const file of pluginFiles) {
-  try {
-    const filePath = pathToFileURL(path.join(pluginsDir, file)).href
-    const plugin = await import(filePath)
-    const data = plugin.default
-    if (!data || !data.commands) continue
-    if (typeof data.before === 'function') {
-      global.beforeHandlers.push({ plugin: file, handler: data.before })
+    try {
+        const filePath = pathToFileURL(path.join(pluginsDir, file)).href;
+        const plugin = await import(filePath);
+        const pluginExport = plugin.default;
+
+        if (pluginExport && pluginExport.commands) {
+            // Optimization: Store before handler separately
+            if (pluginExport.before && typeof pluginExport.before === 'function') {
+                global.beforeHandlers.push({
+                    plugin: file,
+                    handler: pluginExport.before
+                });
+            }
+
+            for (const cmd of pluginExport.commands) {
+                global.commandMap.set(cmd, {
+                    execute: pluginExport.execute,
+                    plugin: file
+                });
+            }
+            console.log(`ꕥ Plugin cargado: ${file}`);
+        }
+    } catch (error) {
+        console.error(`ꕤ Error cargando plugin ${file}:`, error.message);
     }
-    for (const cmd of data.commands) {
-      global.commandMap.set(cmd, { execute: data.execute, plugin: file })
-    }
-  } catch {}
 }
 
-bot.on('qr', async qr => {
-  const qrString = await QRCode.toString(qr, { type: 'terminal', small: true })
-  console.log(qrString)
-})
+// --- Event Handlers ---
+console.log('📌 Registrando event handlers...');
 
-bot.on('open', account => {
-  bot.ws.ev.on('messages.upsert', async ({ messages }) => {
-    for (const m of messages) {
-      await messageHandler.handleMessage(bot, m)
-    }
-  })
+bot.on('qr', async (qr) => {
+    console.log('\n✨ Escanea este código QR con WhatsApp ✨\n');
+    const qrString = await QRCode.toString(qr, { type: 'terminal', small: true });
+    console.log(qrString);
+});
 
-  bot.ws.ev.on('group-participants.update', async event => {
-    await welcomeHandler.handle(bot.ws, event)
-  })
-})
+bot.on('open', (account) => {
+    console.log('🎉 EVENTO OPEN DISPARADO!');
+    console.log('✅ Conexión exitosa!');
+    console.log(`📱 Bot conectado: ${account.name || 'Kaoruko Waguri'}`);
 
-bot.on('error', err => console.error(err))
+    // Message Handler
+    bot.ws.ev.on('messages.upsert', async ({ messages, type }) => {
+        for (const m of messages) {
+            await messageHandler.handleMessage(bot, m);
+        }
+    });
 
-const backupDir = path.join(__dirname, 'backup')
-if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir)
+    // Group Participants Handler (Welcome/Goodbye)
+    bot.ws.ev.on('group-participants.update', async (event) => {
+        await welcomeHandler.handle(bot.ws, event);
+    });
+});
 
-const backupSession = () => {
-  const creds = path.join(sessionDir, 'creds.json')
-  if (!fs.existsSync(creds)) return
-  const name = `creds-${Date.now()}.json`
-  fs.copyFileSync(creds, path.join(backupDir, name))
-  const files = fs.readdirSync(backupDir).sort()
-  while (files.length > 3) {
-    fs.unlinkSync(path.join(backupDir, files.shift()))
-  }
-}
+bot.on('close', (reason) => {
+    console.log('⚠️ Conexión cerrada:', reason);
+});
 
-setInterval(async () => {
-  if (global.db) await dbService.save()
-}, 30000)
+bot.on('error', (err) => {
+    console.error('❌ Error del bot:', err);
+});
 
-setInterval(() => {
-  backupSession()
-}, 300000)
+// --- Graceful Shutdown ---
+const gracefulShutdown = async (signal) => {
+    console.log(`\n${signal} recibido. Cerrando gracefully...`);
+    await dbService.gracefulShutdown();
+    await gachaService.gracefulShutdown();
+    process.exit(0);
+};
 
-const shutdown = async () => {
-  await dbService.gracefulShutdown()
-  await gachaService.gracefulShutdown()
-  process.exit(0)
-}
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
-
-await bot.login('qr')
+// --- Start Bot ---
+console.log('🚀 Iniciando bot con @imjxsx/wapi...');
+await bot.login('qr');
