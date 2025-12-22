@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['wtop', 'topwaifus'],
 
@@ -11,17 +13,19 @@ export default {
 
         if (waifus.length === 0) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ No hay votos registrados aún.'
+                text: styleText('ꕤ No hay votos registrados aún.')
             });
         }
 
-        let message = 'ꕥ *Top 10 Waifus*\n\n';
+        let message = 'ꕥ Ranking de Popularidad\n\n';
+        message += '➭ Top 10 Personajes más Votados\n\n';
 
         waifus.forEach((waifu, i) => {
-            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
-            message += `${medal} ${waifu.name}: ❤️ ${waifu.voteCount} votos\n`;
+            const medal = i === 0 ? '❶' : i === 1 ? '❷' : i === 2 ? '❸' : `${i + 1}.`;
+            message += `${medal} Nombre » ${waifu.name}\n`;
+            message += `> ⚘ Votos » ${waifu.voteCount}\n\n`;
         });
 
-        await sock.sendMessage(chatId, { text: message });
+        await sock.sendMessage(chatId, { text: styleText(message) });
     }
 };

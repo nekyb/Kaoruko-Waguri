@@ -1,4 +1,5 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['copilot'],
@@ -9,7 +10,7 @@ export default {
         const { bot, chatId, args, text, reply } = ctx;
 
         if (!text) {
-            return await reply('ꕤ Por favor escribe algo para hablar con Copilot.\nEjemplo: #copilot Hola, ¿cómo estás?');
+            return await reply(styleText('ꕤ Por favor escribe algo para hablar con Copilot.\nEjemplo: #copilot Hola, ¿cómo estás?'));
         }
 
         try {
@@ -17,13 +18,13 @@ export default {
             const response = await axios.get(apiUrl);
             const data = response.data;
             if (!data || !data.status || !data.response) {
-                return await reply('ꕤ No pude obtener una respuesta de Copilot. Inténtalo más tarde.');
+                return await reply(styleText('ꕤ No pude obtener una respuesta de Copilot. Inténtalo más tarde.'));
             }
 
-            await reply(data.response);
+            await reply(styleText(data.response));
         } catch (error) {
             console.error('[Copilot] Error:', error);
-            await reply('ꕤ Ocurrió un error al conectar con Copilot.');
+            await reply(styleText('ꕤ Ocurrió un error al conectar con Copilot.'));
         }
     }
 };

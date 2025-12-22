@@ -1,4 +1,5 @@
-import fetch from "node-fetch";
+﻿import fetch from "node-fetch";
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['gemini'],
@@ -9,7 +10,7 @@ export default {
         const { text, prefix, command, bot, chatId, msg } = ctx;
         const conn = bot.sock;
         if (!text || text.trim().length === 0) {
-            return ctx.reply(`💬 Ejemplo:\n${prefix + command} ¿qué es un agujero negro?`);
+            return await ctx.reply(styleText(`💬 Ejemplo:\n${prefix + command} ¿qué es un agujero negro?`));
         }
 
         if (ctx.react) {
@@ -23,10 +24,10 @@ export default {
             const json = await res.json();
             const reply = json?.data?.response;
             if (!reply) throw new Error("Gemini devolvió un resultado vacío");
-            await conn.sendMessage(chatId, { text: reply }, { quoted: ctx.msg });
+            await conn.sendMessage(chatId, { text: styleText(reply) }, { quoted: ctx.msg });
         } catch (error) {
             console.error("❌ Error en /gemini:", error.message);
-            await ctx.reply("❌ Hubo un problema al consultar Gemini AI.");
+            await ctx.reply(styleText("❌ Hubo un problema al consultar Gemini AI."));
         }
 
         if (ctx.react) {

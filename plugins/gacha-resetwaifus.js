@@ -1,11 +1,11 @@
-import { isOwner } from '../lib/utils.js';
+﻿import { isOwner, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['resetwaifus', 'reiniciarwaifus'],
-    
+
     async execute(ctx) {
         if (!isOwner(ctx.sender, global.botOwner)) {
-            return await ctx.reply('✘ Solo el owner puede usar este comando.');
+            return await ctx.reply(styleText('✘ Solo el owner puede usar este comando.'));
         }
 
         try {
@@ -13,7 +13,7 @@ export default {
             const characters = gachaService.getAll();
 
             if (characters.length === 0) {
-                return await ctx.reply('✘ No hay waifus registradas.');
+                return await ctx.reply(styleText('✘ No hay waifus registradas.'));
             }
 
             gachaService.resetAllCharacters();
@@ -26,9 +26,9 @@ export default {
             }
             ctx.dbService.markDirty();
 
-            await ctx.reply('✅ Todas las waifus han sido reiniciadas. Ahora nadie las posee.');
+            await ctx.reply(styleText('✅ Todas las waifus han sido reiniciadas. Ahora nadie las posee.'));
         } catch (error) {
-            await ctx.reply(`✘ Error: ${error.message}`);
+            await ctx.reply(styleText(`✘ Error: ${error.message}`));
         }
     }
 };

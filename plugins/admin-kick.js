@@ -1,82 +1,94 @@
-import { isAdmin, isBotAdmin, extractMentions } from '../lib/utils.js';
+﻿import { isAdmin, isBotAdmin, extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['kick'],
 
     async execute(ctx) {
-        console.log('[DEBUG] admin-kick: Inicio del comando');
-        console.log('[DEBUG] admin-kick: isGroup:', ctx.isGroup);
-        console.log('[DEBUG] admin-kick: sender:', ctx.sender);
-        console.log('[DEBUG] admin-kick: chatId:', ctx.chatId);
+        console.log(`[AdminKick] ========== INICIANDO COMANDO KICK ==========`);
+        console.log(`[AdminKick] Sender: ${ctx.sender}`);
+        console.log(`[AdminKick] SenderLid: ${ctx.senderLid}`);
+        console.log(`[AdminKick] ChatId: ${ctx.chatId}`);
+        console.log(`[AdminKick] isGroup: ${ctx.isGroup}`);
 
         if (!ctx.isGroup) {
-            console.log('[DEBUG] admin-kick: Comando usado fuera de un grupo');
-            return await ctx.reply('ꕤ Este comando solo funciona en grupos.');
+            return await ctx.reply(styleText('ꕤ Este comando solo funciona en grupos.'));
         }
 
-        // FIX: Usar ctx.sender en lugar de ctx.from.id para consistencia
-        const admin = await isAdmin(ctx.bot.sock, ctx.chatId, ctx.sender);
-        console.log('[DEBUG] admin-kick: isAdmin resultado:', admin);
+        // Usar senderLid para verificación de admin (los participantes del grupo usan LID)
+        const userIdForAdmin = ctx.senderLid || ctx.sender;
+        console.log(`[AdminKick] Verificando si el usuario es admin con ID: ${userIdForAdmin}`);
+        const admin = await isAdmin(ctx.bot, ctx.chatId, userIdForAdmin);
+        console.log(`[AdminKick] ¿Usuario es admin?: ${admin}`);
 
         if (!admin) {
-            console.log('[DEBUG] admin-kick: Usuario no es admin');
-            return await ctx.reply('ꕤ Solo los administradores pueden usar este comando.');
+            return await ctx.reply(styleText('ꕤ Solo los administradores pueden usar este comando.'));
         }
 
-        const botAdmin = await isBotAdmin(ctx.bot.sock, ctx.chatId);
-        console.log('[DEBUG] admin-kick: isBotAdmin resultado:', botAdmin);
+        // Verificar si el bot es admin
+        console.log(`[AdminKick] Verificando si el bot es admin...`);
+        const botAdmin = await isBotAdmin(ctx.bot, ctx.chatId);
+        console.log(`[AdminKick] ¿Bot es admin?: ${botAdmin}`);
 
         if (!botAdmin) {
-            console.log('[DEBUG] admin-kick: Bot no es admin');
-            return await ctx.reply('ꕤ Necesito ser administrador para expulsar usuarios.');
+            return await ctx.reply(styleText('ꕤ Necesito ser administrador para expulsar usuarios.'));
         }
 
         const mentions = extractMentions(ctx);
-        console.log('[DEBUG] admin-kick: Menciones extraídas:', mentions);
+        console.log(`[AdminKick] Menciones encontradas:`, mentions);
 
         if (mentions.length === 0) {
-            console.log('[DEBUG] admin-kick: No se encontraron menciones');
-            return await ctx.reply('ꕤ Debes mencionar al usuario a expulsar.');
+            return await ctx.reply(styleText('ꕤ Debes mencionar al usuario a expulsar.\n\n> _Uso: #kick @usuario_'));
         }
 
         try {
-            // Get group metadata to find correct participant IDs
-            const groupMetadata = await ctx.bot.sock.groupMetadata(ctx.chatId);
-            console.log('[DEBUG] admin-kick: Participantes totales:', groupMetadata.participants.length);
+            const groupMetadata = await ctx.bot.groupMetadata(ctx.chatId);
+            console.log(`[AdminKick] Participantes en grupo: ${groupMetadata.participants.length}`);
 
             for (const mentionedUser of mentions) {
                 try {
-                    // Extract phone number from mention (e.g., "573115434166@s.whatsapp.net" -> "573115434166")
                     const phoneNumber = mentionedUser.split('@')[0].split(':')[0];
-                    console.log('[DEBUG] admin-kick: Buscando número:', phoneNumber);
+                    console.log(`[AdminKick] Buscando usuario con número: ${phoneNumber}`);
 
-                    // Find the participant in the group with matching phone number
                     const participant = groupMetadata.participants.find(p => {
                         const participantNumber = p.id.split('@')[0].split(':')[0];
                         return participantNumber === phoneNumber;
                     });
 
                     if (!participant) {
-                        console.log('[DEBUG] admin-kick: Participante NO encontrado:', phoneNumber);
-                        await ctx.reply(`ꕤ No se encontró al usuario @${phoneNumber} en el grupo.`);
+                        console.log(`[AdminKick] Usuario no encontrado en el grupo`);
+                        await ctx.reply(styleText(`ꕤ No se encontró al usuario @${phoneNumber} en el grupo.`), {
+                            mentions: [mentionedUser]
+                        });
                         continue;
                     }
 
-                    console.log('[DEBUG] admin-kick: Expulsando usuario:', participant.id);
-                    await ctx.bot.sock.groupParticipantsUpdate(ctx.chatId, [participant.id], 'remove');
-                    console.log('[DEBUG] admin-kick: Usuario expulsado exitosamente');
+                    console.log(`[AdminKick] Usuario encontrado: ${participant.id}, admin: ${participant.admin}`);
 
-                    await ctx.reply(`ꕥ @${phoneNumber} ha sido expulsado del grupo.`, {
+                    // No permitir kickear admins
+                    if (participant.admin === 'admin' || participant.admin === 'superadmin') {
+                        await ctx.reply(styleText(`ꕤ No puedo expulsar a @${phoneNumber} porque es administrador.`), {
+                            mentions: [participant.id]
+                        });
+                        continue;
+                    }
+
+                    await ctx.bot.groupParticipantsUpdate(ctx.chatId, [participant.id], 'remove');
+                    console.log(`[AdminKick] Usuario expulsado exitosamente`);
+
+                    await ctx.reply(styleText(`ꕥ @${phoneNumber} ha sido expulsado del grupo.`), {
                         mentions: [participant.id]
                     });
                 } catch (error) {
-                    console.error('[DEBUG] admin-kick: Error expulsando usuario:', error);
-                    await ctx.reply('ꕤ Error al expulsar al usuario: ' + error.message);
+                    console.error('[AdminKick] Error expulsando usuario:', error);
+                    await ctx.reply(styleText('ꕤ Error al expulsar al usuario: ' + error.message));
                 }
             }
         } catch (error) {
-            console.error('[DEBUG] admin-kick: Error obteniendo metadata:', error);
-            await ctx.reply('ꕤ Error al obtener información del grupo: ' + error.message);
+            console.error('[AdminKick] Error obteniendo metadata:', error);
+            await ctx.reply(styleText('ꕤ Error al obtener información del grupo: ' + error.message));
         }
+
+        console.log(`[AdminKick] ========== FIN COMANDO KICK ==========`);
     }
 };
+

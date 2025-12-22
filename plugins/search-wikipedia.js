@@ -1,4 +1,5 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import { styleText } from '../lib/utils.js';
 
 const WIKI_SEARCH_API = 'https://es.wikipedia.org/w/api.php';
 const WIKI_SUMMARY_API = 'https://es.wikipedia.org/api/rest_v1/page/summary';
@@ -15,18 +16,18 @@ export default {
         const conn = bot?.sock;
 
         if (!conn) {
-            return ctx.reply('❌ Error: Conexión no disponible.');
+            return await ctx.reply(styleText('❌ Error: Conexión no disponible.'));
         }
 
         try {
             if (!text || !text.trim()) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     `《✧》 *Uso incorrecto del comando*\n\n` +
                     `*Ejemplos:*\n` +
                     `✿ ${prefix}${command} inteligencia artificial\n` +
                     `✿ ${prefix}wiki Albert Einstein\n` +
                     `✿ ${prefix}wp Colombia`
-                );
+                ));
             }
 
             const query = text.trim();
@@ -44,10 +45,10 @@ export default {
             const [, titles, , urls] = searchResponse.data;
 
             if (!titles || !Array.isArray(titles) || titles.length === 0) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     `《✧》 No se encontraron resultados en Wikipedia para: "${query}"\n\n` +
                     `💡 *Tip:* Intenta con otros términos de búsqueda.`
-                );
+                ));
             }
 
             const title = titles[0];
@@ -65,10 +66,10 @@ export default {
             const pageData = summaryResponse.data;
 
             if (!pageData || !pageData.extract) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     `《✧》 No se pudo obtener información para: "${query}"\n\n` +
                     `💡 *Tip:* Intenta con términos más específicos.`
-                );
+                ));
             }
 
             // Construir respuesta
@@ -94,17 +95,17 @@ export default {
                 try {
                     await conn.sendMessage(chatId, {
                         image: { url: imageUrl },
-                        caption: responseText
+                        caption: styleText(responseText)
                     }, { quoted: m });
                 } catch (imgError) {
                     console.error('[Wikipedia] Error enviando imagen:', imgError.message);
                     await conn.sendMessage(chatId, {
-                        text: responseText
+                        text: styleText(responseText)
                     }, { quoted: m });
                 }
             } else {
                 await conn.sendMessage(chatId, {
-                    text: responseText
+                    text: styleText(responseText)
                 }, { quoted: m });
             }
 
@@ -127,7 +128,7 @@ export default {
                 errorMsg += '\n\n💡 *Tip:* Verifica la ortografía o usa términos más específicos.';
             }
 
-            await ctx.reply(errorMsg);
+            await ctx.reply(styleText(errorMsg));
         }
     }
 };

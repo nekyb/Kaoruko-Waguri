@@ -1,73 +1,86 @@
-import { isAdmin, isBotAdmin, extractMentions } from '../lib/utils.js';
+﻿import { isAdmin, isBotAdmin, extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['ban'],
 
     async execute(ctx) {
-        console.log('[DEBUG] admin-ban: Inicio del comando');
-        console.log('[DEBUG] admin-ban: isGroup:', ctx.isGroup);
-        console.log('[DEBUG] admin-ban: sender:', ctx.sender);
-        console.log('[DEBUG] admin-ban: chatId:', ctx.chatId);
+        console.log(`[AdminBan] ========== INICIANDO COMANDO BAN ==========`);
+        console.log(`[AdminBan] Sender: ${ctx.sender}`);
+        console.log(`[AdminBan] SenderLid: ${ctx.senderLid}`);
+        console.log(`[AdminBan] ChatId: ${ctx.chatId}`);
 
         if (!ctx.isGroup) {
-            console.log('[DEBUG] admin-ban: Comando usado fuera de un grupo');
-            return await ctx.reply('ꕤ Este comando solo funciona en grupos.');
+            return await ctx.reply(styleText('ꕤ Este comando solo funciona en grupos.'));
         }
 
-        const admin = await isAdmin(ctx.bot.sock, ctx.chatId, ctx.sender);
-        console.log('[DEBUG] admin-ban: isAdmin resultado:', admin);
+        // Usar senderLid para verificación de admin
+        const userIdForAdmin = ctx.senderLid || ctx.sender;
+        console.log(`[AdminBan] Verificando permisos de admin con: ${userIdForAdmin}`);
+        const admin = await isAdmin(ctx.bot, ctx.chatId, userIdForAdmin);
+        console.log(`[AdminBan] ¿Usuario es admin?: ${admin}`);
 
         if (!admin) {
-            console.log('[DEBUG] admin-ban: Usuario no es admin');
-            return await ctx.reply('ꕤ Solo los administradores pueden usar este comando.');
+            return await ctx.reply(styleText('ꕤ Solo los administradores pueden usar este comando.'));
         }
 
-        const botAdmin = await isBotAdmin(ctx.bot.sock, ctx.chatId);
-        console.log('[DEBUG] admin-ban: isBotAdmin resultado:', botAdmin);
+        console.log(`[AdminBan] Verificando si el bot es admin...`);
+        const botAdmin = await isBotAdmin(ctx.bot, ctx.chatId);
+        console.log(`[AdminBan] ¿Bot es admin?: ${botAdmin}`);
 
         if (!botAdmin) {
-            console.log('[DEBUG] admin-ban: Bot no es admin');
-            return await ctx.reply('ꕤ Necesito ser administrador para banear usuarios.');
+            return await ctx.reply(styleText('ꕤ Necesito ser administrador para banear usuarios.'));
         }
 
         const mentions = extractMentions(ctx);
-        console.log('[DEBUG] admin-ban: Menciones extraídas:', mentions);
+        console.log(`[AdminBan] Menciones:`, mentions);
 
         if (mentions.length === 0) {
-            console.log('[DEBUG] admin-ban: No se encontraron menciones');
-            return await ctx.reply('ꕤ Debes mencionar al usuario a banear.');
+            return await ctx.reply(styleText('ꕤ Debes mencionar al usuario a banear.\n\n> _Uso: #ban @usuario_'));
         }
 
         const user = mentions[0];
-        console.log('[DEBUG] admin-ban: Usuario a banear:', user);
 
         try {
-            const groupData = ctx.dbService.getGroup(ctx.chatId);
+            // Verificar que no sea admin
+            const groupMetadata = await ctx.bot.groupMetadata(ctx.chatId);
+            const phoneNumber = user.split('@')[0].split(':')[0];
+            const participant = groupMetadata.participants.find(p => {
+                const participantNumber = p.id.split('@')[0].split(':')[0];
+                return participantNumber === phoneNumber;
+            });
 
+            if (participant && (participant.admin === 'admin' || participant.admin === 'superadmin')) {
+                return await ctx.reply(styleText(`ꕤ No puedo banear a @${phoneNumber} porque es administrador.`), {
+                    mentions: [user]
+                });
+            }
+
+            const groupData = ctx.dbService.getGroup(ctx.chatId);
             if (!groupData.banned) {
                 groupData.banned = [];
             }
 
-            console.log('[DEBUG] admin-ban: Lista de baneados actual:', groupData.banned);
-
             if (groupData.banned.includes(user)) {
-                console.log('[DEBUG] admin-ban: Usuario ya está baneado');
-                return await ctx.reply('ꕤ Ese usuario ya está baneado.');
+                return await ctx.reply(styleText('ꕤ Ese usuario ya está baneado.'));
             }
 
             groupData.banned.push(user);
             ctx.dbService.markDirty();
-            console.log('[DEBUG] admin-ban: Usuario agregado a lista de baneados');
 
-            await ctx.bot.sock.groupParticipantsUpdate(ctx.chatId, [user], 'remove');
-            console.log('[DEBUG] admin-ban: Usuario removido del grupo exitosamente');
+            if (participant) {
+                await ctx.bot.groupParticipantsUpdate(ctx.chatId, [participant.id], 'remove');
+            }
 
-            await ctx.reply(`ꕤ @${user.split('@')[0]} ha sido baneado del grupo.`, {
+            console.log(`[AdminBan] Usuario baneado exitosamente`);
+            await ctx.reply(styleText(`ꕥ @${user.split('@')[0]} ha sido baneado del grupo.`), {
                 mentions: [user]
             });
         } catch (error) {
-            console.error('[DEBUG] admin-ban: Error:', error);
-            await ctx.reply('ꕤ Error al banear al usuario: ' + error.message);
+            console.error('[AdminBan] Error:', error);
+            await ctx.reply(styleText('ꕤ Error al banear al usuario: ' + error.message));
         }
+
+        console.log(`[AdminBan] ========== FIN COMANDO BAN ==========`);
     }
 };
+

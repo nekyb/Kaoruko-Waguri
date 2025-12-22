@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['pfp', 'perfil', 'foto'],
     tags: ['tools'],
@@ -8,17 +10,15 @@ export default {
         const conn = bot?.sock;
 
         if (!conn) {
-            return ctx.reply('❌ Error: Conexión no disponible.');
+            return await ctx.reply(styleText('❌ Error: Conexión no disponible.'));
         }
 
         let targetJid = sender;
-
-        // Check for mentions
         const mentions = msg.message?.extendedTextMessage?.contextInfo?.mentionedJid;
         if (mentions && mentions.length > 0) {
             targetJid = mentions[0];
         }
-        // Check for quoted message
+
         else if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
             targetJid = msg.message.extendedTextMessage.contextInfo.participant;
         }
@@ -32,23 +32,23 @@ export default {
             }
 
             if (!pfpUrl) {
-                return await ctx.reply('ꕤ El usuario no tiene foto de perfil o es privada.');
+                return await ctx.reply(styleText('ꕤ El usuario no tiene foto de perfil o es privada.'));
             }
 
-            const caption = `ꕥ *Profile Picture* 📸✨\n\n` +
-                `✿ *Usuario:* @${targetJid.split('@')[0]}\n` +
+            const caption = `ꕥ *Profile Picture*\n\n` +
+                `> *Usuario* » @${targetJid.split('@')[0]}\n` +
                 `──────────────────\n` +
                 `> _*Powered By DeltaByte*_`;
 
             await conn.sendMessage(chatId, {
                 image: { url: pfpUrl },
-                caption: caption,
+                caption: styleText(caption),
                 mentions: [targetJid]
             });
 
         } catch (error) {
             console.error('[PFP] Error:', error);
-            await ctx.reply('ꕤ Ocurrió un error al obtener la foto. Inténtalo más tarde.');
+            await ctx.reply(styleText('ꕤ Ocurrió un error al obtener la foto. Inténtalo más tarde.'));
         }
     }
 };

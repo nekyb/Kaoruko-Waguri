@@ -1,4 +1,5 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['claude'],
@@ -9,7 +10,7 @@ export default {
         const { bot, chatId, args, text, reply } = ctx;
 
         if (!text) {
-            return await reply('ꕤ Por favor escribe algo para hablar con Claude.\nEjemplo: #claude Hola, ¿qué puedes hacer?');
+            return await reply(styleText('ꕤ Por favor escribe algo para hablar con Claude.\nEjemplo: #claude Hola, ¿qué puedes hacer?'));
         }
 
         try {
@@ -17,13 +18,13 @@ export default {
             const response = await axios.get(apiUrl);
             const data = response.data;
             if (!data || !data.status || !data.result) {
-                return await reply('ꕤ No pude obtener una respuesta de Claude. Inténtalo más tarde.');
+                return await reply(styleText('ꕤ No pude obtener una respuesta de Claude. Inténtalo más tarde.'));
             }
 
-            await reply(data.result);
+            await reply(styleText(data.result));
         } catch (error) {
             console.error('[Claude] Error:', error);
-            await reply('ꕤ Ocurrió un error al conectar con Claude.');
+            await reply(styleText('ꕤ Ocurrió un error al conectar con Claude.'));
         }
     }
 };

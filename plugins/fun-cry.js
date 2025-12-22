@@ -1,11 +1,10 @@
-import { extractMentions } from '../lib/utils.js';
-import { groupMetadataCache } from '../lib/GroupMetadataCache.js';
+﻿import { extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['cry', 'llorar'],
 
     async execute(ctx) {
-        const { bot, msg, sender, from, args, chatId } = ctx;
+        const { msg, sender, from, chatId } = ctx;
 
         let who;
 
@@ -29,10 +28,9 @@ export default {
         if (who === sender) {
             targetName = senderName;
         } else {
-            // Try to get name from group metadata
             try {
                 if (chatId.endsWith('@g.us')) {
-                    const groupMetadata = await groupMetadataCache.get(bot.sock, chatId);
+                    const groupMetadata = await ctx.bot.groupMetadata(chatId);
                     const whoNumber = who.split('@')[0].split(':')[0];
 
                     const participant = groupMetadata.participants.find(p => {
@@ -40,7 +38,6 @@ export default {
                         return participantNumber === whoNumber;
                     });
 
-                    // Use notify name if available, otherwise use number
                     targetName = participant?.notify || participant?.name || whoNumber;
                 } else {
                     targetName = who.split('@')[0].split(':')[0];
@@ -53,15 +50,15 @@ export default {
 
         // React
         try {
-            await bot.sock.sendMessage(ctx.chatId, { react: { text: '😭', key: msg.key } });
+            await ctx.bot.sendMessage(chatId, { react: { text: '😭', key: msg.key } });
         } catch (e) { }
 
         // Build message
         let str;
         if (who !== sender) {
-            str = `\`${senderName}\` está llorando por culpa de \`${targetName}\`.`;
+            str = styleText(`\`${senderName}\` está llorando por culpa de \`${targetName}\`.`);
         } else {
-            str = `\`${senderName}\` está llorando.`;
+            str = styleText(`\`${senderName}\` está llorando.`);
         }
 
         // Videos
@@ -79,7 +76,7 @@ export default {
         const video = videos[Math.floor(Math.random() * videos.length)];
 
         // Send
-        await bot.sock.sendMessage(ctx.chatId, {
+        await ctx.bot.sendMessage(chatId, {
             video: { url: video },
             caption: str,
             gifPlayback: true,

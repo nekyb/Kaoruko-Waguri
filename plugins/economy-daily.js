@@ -1,4 +1,4 @@
-import { formatNumber, getCooldown, formatTime } from '../lib/utils.js';
+﻿import { formatNumber, getCooldown, formatTime, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['daily', 'diario'],
@@ -11,7 +11,7 @@ export default {
 
         if (now - lastDaily < cooldown) {
             const timeLeft = Math.round((cooldown - (now - lastDaily)) / 3600000);
-            return await ctx.reply(`ꕤ Ya reclamaste tu recompensa diaria. Vuelve en *${timeLeft}* horas.`);
+            return await ctx.reply(styleText(`ꕤ Ya reclamaste tu recompensa diaria. Vuelve en *${timeLeft}* horas.`));
         }
 
         const reward = 1000;
@@ -19,7 +19,8 @@ export default {
             'economy.coins': (userData.economy?.coins || 0) + reward,
             'economy.lastDaily': now
         });
+        await ctx.dbService.save();
 
-        await ctx.reply(`ꕥ ¡Recompensa diaria reclamada! +${reward} coins`);
+        await ctx.reply(styleText(`ꕥ Recompensa diaria reclamada, obtuviste *¥${formatNumber(reward)}* coins`));
     }
 };

@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['vote', 'votar'],
 
@@ -6,7 +8,7 @@ export default {
         const sock = bot.sock || bot;
         if (args.length === 0) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ Debes especificar el nombre del personaje.\nUso: #vote <personaje>'
+                text: styleText('ꕤ Debes especificar el nombre del personaje.\nUso: #vote <personaje>')
             });
         }
 
@@ -22,7 +24,7 @@ export default {
 
         if (!character) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ Personaje no encontrado.'
+                text: styleText('ꕤ Personaje no encontrado.')
             });
         }
 
@@ -30,13 +32,13 @@ export default {
 
         if (!result.success) {
             return await sock.sendMessage(chatId, {
-                text: `ꕤ ${result.message}`
+                text: styleText(`ꕤ ${result.message}`)
             });
         }
 
         await sock.sendMessage(chatId, {
-            text: `ꕥ Has votado por ${character.name}\n` +
-                `Votos totales: ${result.character.voteCount || 0}`
+            text: styleText(`ꕥ Has votado por ${character.name}\n` +
+                `> ⚘ votos totales: ${result.character.voteCount || 0}`)
         });
     }
 };

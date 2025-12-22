@@ -1,3 +1,5 @@
+﻿
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['tiktok', 'ttk', 'tt'],
@@ -10,9 +12,9 @@ export default {
 
         if (!links || links.length === 0) {
             return await bot.sendMessage(chatId, {
-                text: `《✧》 *Uso incorrecto del comando*\n\n` +
+                text: styleText(`《✧》 *Uso incorrecto del comando*\n\n` +
                     `*Ejemplos:*\n` +
-                    `✿ #tiktok https://www.tiktok.com/@user/video/xxx`
+                    `✿ #tiktok https://www.tiktok.com/@user/video/xxx`)
             });
         }
 
@@ -24,7 +26,7 @@ export default {
 
                 if (!data || (!data.play && !data.images?.length)) {
                     await bot.sendMessage(chatId, {
-                        text: `《✧》 No se pudo obtener información del enlace '${link}'`
+                        text: styleText(`《✧》 No se pudo obtener información del enlace '${link}'`)
                     });
                     continue;
                 }
@@ -33,7 +35,7 @@ export default {
                     for (let index = 0; index < data.images.length; index++) {
                         const imageUrl = data.images[index];
                         const caption = index === 0 ?
-                            `《✧》 *TikTok Download*\n\n✿ *Título:* ${data.title || 'Sin título'}\n\n_Powered By DeltaByte_` :
+                            styleText(`《✧》 *TikTok Download*\n\n✿ *Título:* ${data.title || 'Sin título'}\n\n_Powered By DeltaByte_`) :
                             null;
 
                         await bot.sendMessage(chatId, {
@@ -42,9 +44,9 @@ export default {
                         });
                     }
                 } else if (data.play) {
-                    const caption = `《✧》 *TikTok Download*\n\n` +
+                    const caption = styleText(`《✧》 *TikTok Download*\n\n` +
                         `✿ *Título:* ${data.title || 'Sin título'}\n\n` +
-                        `_Powered By DeltaByte_`;
+                        `_Powered By DeltaByte_`);
 
                     await bot.sendMessage(chatId, {
                         video: { url: data.play },
@@ -56,7 +58,7 @@ export default {
             } catch (error) {
                 console.error('Error procesando enlace de TikTok:', error);
                 await bot.sendMessage(chatId, {
-                    text: `《✧》 Error al procesar el enlace: ${link}\n\n💡 *Tip:* Asegúrate de que el video sea público.`
+                    text: styleText(`《✧》 Error al procesar el enlace: ${link}\n\n💡 *Tip:* Asegúrate de que el video sea público.`)
                 });
             }
         }

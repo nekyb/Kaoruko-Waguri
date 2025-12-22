@@ -1,5 +1,6 @@
-
+﻿
 import axios from 'axios'
+import { styleText } from '../lib/utils.js'
 
 const instagramSearchCommand = {
     name: 'instagramsearch',
@@ -13,20 +14,20 @@ const instagramSearchCommand = {
 
     async execute(sock, msg, args) {
         const chatId = msg.key.remoteJid
-        
+
         if (args.length === 0) {
             return await sock.sendMessage(chatId, {
-                text: `《✧》 *Uso incorrecto del comando*\n\n` +
+                text: styleText(`ꕤ *Uso incorrecto del comando*\n\n` +
                     `Ejemplo:\n` +
-                    `✿ #instagramsearch naturaleza\n` +
-                    `✿ #igsearch viajes`
+                    `> #instagramsearch naturaleza\n` +
+                    `> #igsearch viajes`)
             })
         }
 
         const query = args.join(' ')
-        
+
         await sock.sendMessage(chatId, {
-            text: `_Esta función está en desarrollo_`
+            text: styleText(`_Esta función está en desarrollo_`)
         })
     }
 }

@@ -1,11 +1,10 @@
-import { extractMentions } from '../lib/utils.js';
-import { groupMetadataCache } from '../lib/GroupMetadataCache.js';
+﻿import { extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['sleep', 'dormir'],
 
     async execute(ctx) {
-        const { bot, msg, sender, from, args, chatId } = ctx;
+        const { msg, sender, from, chatId } = ctx;
 
         let who;
 
@@ -28,7 +27,7 @@ export default {
         } else {
             try {
                 if (chatId.endsWith('@g.us')) {
-                    const groupMetadata = await groupMetadataCache.get(bot.sock, chatId);
+                    const groupMetadata = await ctx.bot.groupMetadata(chatId);
                     const whoNumber = who.split('@')[0].split(':')[0];
 
                     const participant = groupMetadata.participants.find(p => {
@@ -45,14 +44,16 @@ export default {
             }
         }
 
+        // React
         try {
-            await bot.sock.sendMessage(ctx.chatId, { react: { text: '😴', key: msg.key } });
+            await ctx.bot.sendMessage(chatId, { react: { text: '😴', key: msg.key } });
         } catch (e) { }
+
         let str;
         if (who !== sender) {
-            str = `\`${senderName}\` esta durmiendo con \`${targetName}\`.`;
+            str = styleText(`\`${senderName}\` esta durmiendo con \`${targetName}\`.`)
         } else {
-            str = `\`${senderName}\` está tomando una siesta.`;
+            str = styleText(`\`${senderName}\` está tomando una siesta.`);
         }
 
         const videos = [
@@ -70,7 +71,7 @@ export default {
 
         const video = videos[Math.floor(Math.random() * videos.length)];
 
-        await bot.sock.sendMessage(ctx.chatId, {
+        await ctx.bot.sendMessage(chatId, {
             video: { url: video },
             caption: str,
             gifPlayback: true,

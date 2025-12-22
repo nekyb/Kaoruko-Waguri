@@ -1,13 +1,13 @@
-import { getMentions } from '../lib/utils.js';
+﻿import { getMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['giveallharem', 'giveall'],
-    
+
     async execute(sock, m, { chatId, sender, body }) {
         const mentions = getMentions(body);
         if (mentions.length === 0) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ Debes mencionar al usuario.\nUso: #giveall @usuario'
+                text: styleText('ꕤ Debes mencionar al usuario.\nUso: #giveall @usuario')
             });
         }
 
@@ -17,13 +17,13 @@ export default {
 
         if (characters.length === 0) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ No tienes personajes en tu harem.'
+                text: styleText('ꕤ No tienes personajes en tu harem.')
             });
         }
 
         if (!global.db.users[target]) {
             return await sock.sendMessage(chatId, {
-                text: 'ꕤ Ese usuario no está registrado.'
+                text: styleText('ꕤ Ese usuario no está registrado.')
             });
         }
 
@@ -36,8 +36,8 @@ export default {
         userData.gacha.characters = [];
 
         await sock.sendMessage(chatId, {
-            text: `ꕥ *Regalo Masivo*\n\n` +
-                `Has regalado ${count} personajes a @${target.split('@')[0]}`,
+            text: styleText(`ꕥ *Regalo Masivo*\n\n` +
+                `Has regalado ${count} personajes a @${target.split('@')[0]}`),
             mentions: [target]
         });
     }

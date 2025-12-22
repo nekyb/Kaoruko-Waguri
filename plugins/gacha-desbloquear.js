@@ -1,4 +1,4 @@
-import { extractMentions } from '../lib/utils.js';
+﻿import { extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['desbloquear', 'unlock'],
@@ -8,7 +8,7 @@ export default {
         const userData = ctx.userData;
 
         if (mentions.length === 0) {
-            return await ctx.reply('✘ Debes mencionar a alguien.\n\nEjemplo:\n*#desbloquear @usuario*');
+            return await ctx.reply(styleText('✘ Debes mencionar a alguien.\n\nEjemplo:\n*#desbloquear @usuario*'));
         }
 
         const target = mentions[0];
@@ -19,8 +19,8 @@ export default {
 
         if ((userData.monedas || 0) < costo) {
             return await ctx.reply(
-                `✘ No tienes suficientes monedas.\n` +
-                `Necesitas *${costo.toLocaleString()}* monedas para desbloquear la base de @${target.split('@')[0]}.`,
+                styleText(`✘ No tienes suficientes monedas.\n` +
+                    `Necesitas *${costo.toLocaleString()}* monedas para desbloquear la base de @${target.split('@')[0]}.`),
                 { mentions: [target] }
             );
         }
@@ -31,9 +31,9 @@ export default {
         ctx.dbService.markDirty();
 
         await ctx.reply(
-            `> 𐚁 *Base desbloqueada*.\n` +
-            `⟡ @${target.split('@')[0]} ahora está vulnerable por 3 minutos.\n` +
-            `⟡ Podrás robar sus waifus hasta: *${new Date(targetData.desbloqueo).toLocaleString()}*`,
+            styleText(`> 𐚁 *Base desbloqueada*.\n` +
+                `⟡ @${target.split('@')[0]} ahora está vulnerable por 3 minutos.\n` +
+                `⟡ Podrás robar sus waifus hasta: *${new Date(targetData.desbloqueo).toLocaleString()}*`),
             { mentions: [target] }
         );
     }

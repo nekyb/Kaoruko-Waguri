@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['resetdb', 'cleardb'],
 
@@ -15,7 +17,7 @@ export default {
         // Solo el owner puede usar este comando
         if (senderNumber !== ownerNumber) {
             console.log('[DEBUG] admin-resetdb: Usuario no es owner');
-            return await ctx.reply('⛔ Solo el owner puede usar este comando.');
+            return await ctx.reply(styleText('⛔ Solo el owner puede usar este comando.'));
         }
 
         try {
@@ -43,16 +45,16 @@ export default {
             await ctx.dbService.save();
             console.log('[DEBUG] admin-resetdb: Guardado forzado completado');
 
-            await ctx.reply(
+            await ctx.reply(styleText(
                 `✅ *Base de datos reseteada*\n\n` +
                 `👥 Usuarios eliminados: ${usersCount}\n` +
                 `📱 Grupos eliminados: ${groupsCount}\n\n` +
                 `La base de datos está ahora vacía.`
-            );
+            ));
         } catch (error) {
             console.error('[DEBUG] admin-resetdb: Error completo:', error);
             console.error('[DEBUG] admin-resetdb: Stack trace:', error.stack);
-            await ctx.reply('❌ Error al resetear la base de datos: ' + error.message);
+            await ctx.reply(styleText('❌ Error al resetear la base de datos: ' + error.message));
         }
     }
 };

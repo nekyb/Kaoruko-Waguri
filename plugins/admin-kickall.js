@@ -1,4 +1,4 @@
-import { isAdmin, isBotAdmin } from '../lib/utils.js';
+﻿import { isAdmin, isBotAdmin, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['kickall', 'eliminaratodos'],
@@ -6,27 +6,28 @@ export default {
     help: ['kickall'],
 
     async execute(ctx) {
-        const { isGroup, chatId, sender, bot } = ctx;
-
-        if (!isGroup) {
-            return await ctx.reply('ꕤ Este comando solo funciona en grupos.');
+        if (!ctx.isGroup) {
+            return await ctx.reply(styleText('ꕤ Este comando solo funciona en grupos.'));
         }
 
-        const senderIsAdmin = await isAdmin(bot, chatId, sender);
+        const senderIsAdmin = await isAdmin(ctx.bot, ctx.chatId, ctx.senderLid || ctx.sender);
         if (!senderIsAdmin) {
-            return await ctx.reply('ꕤ Solo los administradores pueden usar este comando.');
+            return await ctx.reply(styleText('ꕤ Solo los administradores pueden usar este comando.'));
         }
 
-        const botIsAdmin = await isBotAdmin(bot, chatId);
+        const botIsAdmin = await isBotAdmin(ctx.bot, ctx.chatId);
         if (!botIsAdmin) {
-            return await ctx.reply('ꕤ Necesito ser administrador para eliminar miembros.');
+            return await ctx.reply(styleText('ꕤ Necesito ser administrador para eliminar miembros.'));
         }
 
         try {
-            const metadata = await bot.groupMetadata(chatId);
+            const metadata = await ctx.bot.groupMetadata(ctx.chatId);
             const participants = metadata.participants;
-            const botLid = bot.sock.user?.lid?.split(':')[0]?.split('@')[0];
-            const botNumber = bot.sock.user?.id?.split(':')[0]?.split('@')[0];
+
+            // Obtener IDs del bot para excluirlo
+            const botLid = ctx.bot.sock.user?.lid?.split(':')[0]?.split('@')[0];
+            const botNumber = ctx.bot.sock.user?.id?.split(':')[0]?.split('@')[0];
+
             const toKick = participants.filter(p => {
                 if (p.admin === 'admin' || p.admin === 'superadmin') return false;
                 const participantId = p.id.split(':')[0].split('@')[0];
@@ -35,10 +36,10 @@ export default {
             });
 
             if (toKick.length === 0) {
-                return await ctx.reply('ꕤ No hay miembros para eliminar (solo hay administradores).');
+                return await ctx.reply(styleText('ꕤ No hay miembros para eliminar (solo hay administradores).'));
             }
 
-            await ctx.reply(`⚠️ *Iniciando eliminación masiva*\n📊 Eliminando ${toKick.length} miembros...`);
+            await ctx.reply(styleText(`⚠️ *Iniciando eliminación masiva*\n📊 Eliminando ${toKick.length} miembros...`));
             const batchSize = 5;
             let kicked = 0;
             let failed = 0;
@@ -48,22 +49,22 @@ export default {
                 const jids = batch.map(p => p.id);
 
                 try {
-                    await bot.groupParticipantsUpdate(chatId, jids, 'remove');
+                    await ctx.bot.groupParticipantsUpdate(ctx.chatId, jids, 'remove');
                     kicked += jids.length;
                     if (i + batchSize < toKick.length) {
                         await new Promise(resolve => setTimeout(resolve, 2000));
                     }
                 } catch (error) {
-                    console.error('Error eliminando batch:', error);
+                    console.error('[AdminKickall] Error eliminando batch:', error);
                     failed += jids.length;
                 }
             }
 
-            await ctx.reply(`✅ *Eliminación completada*\n• Eliminados: ${kicked}\n• Fallidos: ${failed}`);
+            await ctx.reply(styleText(`✅ *Eliminación completada*\n• Eliminados: ${kicked}\n• Fallidos: ${failed}`));
 
         } catch (error) {
-            console.error('Error en kickall:', error);
-            await ctx.reply('ꕤ Error al eliminar miembros del grupo.');
+            console.error('[AdminKickall] Error:', error);
+            await ctx.reply(styleText('ꕤ Error al eliminar miembros del grupo.'));
         }
     }
 };

@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['listawaifus', 'listwaifus'],
 
@@ -6,7 +8,7 @@ export default {
         const characters = gachaService.getAll();
 
         if (characters.length === 0) {
-            return await ctx.reply('✘ No hay waifus registradas.');
+            return await ctx.reply(styleText('✘ No hay waifus registradas.'));
         }
 
         const page = parseInt(ctx.args[0]) || 1;
@@ -16,7 +18,7 @@ export default {
         const totalPages = Math.ceil(characters.length / pageSize);
 
         if (page > totalPages || page < 1) {
-            return await ctx.reply(`✘ Página inválida. Total de páginas: ${totalPages}`);
+            return await ctx.reply(styleText(`✘ Página inválida. Total de páginas: ${totalPages}`));
         }
 
         const pageCharacters = characters.slice(startIndex, endIndex);
@@ -35,6 +37,6 @@ export default {
             listMessage += `\nUsa *#listawaifus ${page + 1}* para ver más`;
         }
 
-        await ctx.reply(listMessage.trim());
+        await ctx.reply(styleText(listMessage.trim()));
     }
 };

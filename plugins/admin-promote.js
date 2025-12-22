@@ -1,54 +1,50 @@
-import { isAdmin, isBotAdmin, extractMentions } from '../lib/utils.js';
+﻿import { isAdmin, isBotAdmin, extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['promote'],
 
     async execute(ctx) {
-        console.log('[DEBUG] admin-promote: Inicio del comando');
-        console.log('[DEBUG] admin-promote: isGroup:', ctx.isGroup);
-        console.log('[DEBUG] admin-promote: sender:', ctx.sender);
-        console.log('[DEBUG] admin-promote: chatId:', ctx.chatId);
+        console.log(`[AdminPromote] ========== INICIANDO COMANDO PROMOTE ==========`);
+        console.log(`[AdminPromote] Sender: ${ctx.sender}`);
+        console.log(`[AdminPromote] SenderLid: ${ctx.senderLid}`);
+        console.log(`[AdminPromote] ChatId: ${ctx.chatId}`);
 
         if (!ctx.isGroup) {
-            console.log('[DEBUG] admin-promote: Comando usado fuera de un grupo');
-            return await ctx.reply('ꕤ Este comando solo funciona en grupos.');
+            return await ctx.reply(styleText('ꕤ Este comando solo funciona en grupos.'));
         }
 
-        // FIX: Usar ctx.sender en lugar de ctx.from.id para consistencia
-        const admin = await isAdmin(ctx.bot.sock, ctx.chatId, ctx.sender);
-        console.log('[DEBUG] admin-promote: isAdmin resultado:', admin);
+        // Usar senderLid para verificación de admin
+        const userIdForAdmin = ctx.senderLid || ctx.sender;
+        console.log(`[AdminPromote] Verificando permisos de admin con: ${userIdForAdmin}`);
+        const admin = await isAdmin(ctx.bot, ctx.chatId, userIdForAdmin);
+        console.log(`[AdminPromote] ¿Usuario es admin?: ${admin}`);
 
         if (!admin) {
-            console.log('[DEBUG] admin-promote: Usuario no es admin');
-            return await ctx.reply('ꕤ Solo los administradores pueden usar este comando.');
+            return await ctx.reply(styleText('ꕤ Solo los administradores pueden usar este comando.'));
         }
 
-        const botAdmin = await isBotAdmin(ctx.bot.sock, ctx.chatId);
-        console.log('[DEBUG] admin-promote: isBotAdmin resultado:', botAdmin);
+        console.log(`[AdminPromote] Verificando si el bot es admin...`);
+        const botAdmin = await isBotAdmin(ctx.bot, ctx.chatId);
+        console.log(`[AdminPromote] ¿Bot es admin?: ${botAdmin}`);
 
         if (!botAdmin) {
-            console.log('[DEBUG] admin-promote: Bot no es admin');
-            return await ctx.reply('ꕤ Necesito ser administrador para promover usuarios.');
+            return await ctx.reply(styleText('ꕤ Necesito ser administrador para promover usuarios.'));
         }
 
         const mentions = extractMentions(ctx);
-        console.log('[DEBUG] admin-promote: Menciones extraídas:', mentions);
+        console.log(`[AdminPromote] Menciones:`, mentions);
 
         if (mentions.length === 0) {
-            console.log('[DEBUG] admin-promote: No se encontraron menciones');
-            return await ctx.reply('ꕤ Debes mencionar al usuario a promover.');
+            return await ctx.reply(styleText('ꕤ Debes mencionar al usuario a promover.\n\n> _Uso: #promote @usuario_'));
         }
 
         try {
-            // Get group metadata to find correct participant IDs
-            const groupMetadata = await ctx.bot.sock.groupMetadata(ctx.chatId);
-            console.log('[DEBUG] admin-promote: Participantes totales:', groupMetadata.participants.length);
-
+            const groupMetadata = await ctx.bot.groupMetadata(ctx.chatId);
             const participantIds = [];
 
             for (const mentionedUser of mentions) {
                 const phoneNumber = mentionedUser.split('@')[0].split(':')[0];
-                console.log('[DEBUG] admin-promote: Buscando número:', phoneNumber);
+                console.log(`[AdminPromote] Buscando usuario: ${phoneNumber}`);
 
                 const participant = groupMetadata.participants.find(p => {
                     const participantNumber = p.id.split('@')[0].split(':')[0];
@@ -56,28 +52,36 @@ export default {
                 });
 
                 if (participant) {
-                    console.log('[DEBUG] admin-promote: Participante encontrado:', participant.id);
+                    console.log(`[AdminPromote] Usuario encontrado: ${participant.id}`);
+
+                    // Verificar si ya es admin
+                    if (participant.admin === 'admin' || participant.admin === 'superadmin') {
+                        await ctx.reply(styleText(`ꕤ @${phoneNumber} ya es administrador.`), {
+                            mentions: [participant.id]
+                        });
+                        continue;
+                    }
+
                     participantIds.push(participant.id);
-                } else {
-                    console.log('[DEBUG] admin-promote: Participante NO encontrado para:', phoneNumber);
                 }
             }
 
             if (participantIds.length === 0) {
-                console.log('[DEBUG] admin-promote: No se encontraron participantes válidos');
-                return await ctx.reply('ꕤ No se encontró al usuario mencionado en el grupo.');
+                return await ctx.reply(styleText('ꕤ No se encontró al usuario mencionado en el grupo.'));
             }
 
-            console.log('[DEBUG] admin-promote: Promoviendo usuarios:', participantIds);
-            await ctx.bot.sock.groupParticipantsUpdate(ctx.chatId, participantIds, 'promote');
-            console.log('[DEBUG] admin-promote: Usuario promovido exitosamente');
+            await ctx.bot.groupParticipantsUpdate(ctx.chatId, participantIds, 'promote');
+            console.log(`[AdminPromote] Usuario promovido exitosamente`);
 
-            await ctx.reply(`ꕥ @${participantIds[0].split('@')[0]} ahora es administrador.`, {
+            await ctx.reply(styleText(`ꕥ @${participantIds[0].split('@')[0].split(':')[0]} ahora es administrador.`), {
                 mentions: participantIds
             });
         } catch (error) {
-            console.error('[DEBUG] admin-promote: Error completo:', error);
-            await ctx.reply('ꕤ Error al promover al usuario: ' + error.message);
+            console.error('[AdminPromote] Error:', error);
+            await ctx.reply(styleText('ꕤ Error al promover al usuario: ' + error.message));
         }
+
+        console.log(`[AdminPromote] ========== FIN COMANDO PROMOTE ==========`);
     }
 };
+

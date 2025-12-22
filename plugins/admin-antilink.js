@@ -1,84 +1,77 @@
-import { isAdmin, isBotAdmin } from '../lib/utils.js';
+﻿import { isAdmin, isBotAdmin, styleText } from '../lib/utils.js';
+
+// Cache para saber si el bot es admin en cada grupo (evita llamadas repetidas)
+const botAdminCache = new Map();
 
 export default {
     commands: ['antilink'],
 
-    // Logic to detect and delete links
+    // Fast link detection and deletion
     async before(ctx) {
-        const { isGroup, body, sender, chatId, dbService, bot } = ctx;
+        const { isGroup, body, sender, chatId, dbService, bot, msg } = ctx;
 
+        // Fast fails (sin llamadas a API)
         if (!isGroup || !body) return;
 
-        // Check if antilink is enabled
+        // Check local setting
         const groupSettings = dbService.getGroup(chatId)?.settings;
         if (!groupSettings?.antilink) return;
 
-        // Check for WhatsApp group links
-        const linkRegex = /chat\.whatsapp\.com\/[a-zA-Z0-9]{20,}/i;
-        const isLink = linkRegex.test(body);
+        // Fast regex check
+        const linkRegex = /(https?:\/\/[^\s]+)|(www\.[^\s]+)|(chat\.whatsapp\.com\/[a-zA-Z0-9]+)|(wa\.me\/[0-9]+)/i;
+        if (!linkRegex.test(body)) return;
 
-        if (!isLink) return;
-
-        console.log(`[ANTILINK] Link detectado en ${chatId} de ${sender}`);
-
-        // Check if sender is admin (admins bypass)
-        const senderIsAdmin = await isAdmin(bot, chatId, sender);
-        if (senderIsAdmin) {
-            console.log(`[ANTILINK] Sender es admin, ignorando.`);
-            return;
+        // Check bot admin status (con cache)
+        let botIsAdmin = botAdminCache.get(chatId);
+        if (botIsAdmin === undefined) {
+            botIsAdmin = await isBotAdmin(bot, chatId);
+            botAdminCache.set(chatId, botIsAdmin);
+            // Expira cache en 5 minutos
+            setTimeout(() => botAdminCache.delete(chatId), 5 * 60 * 1000);
         }
 
-        // Check if bot is admin (needed to delete)
-        const botIsAdmin = await isBotAdmin(bot, chatId);
-        if (!botIsAdmin) {
-            console.log(`[ANTILINK] Bot no es admin, no puedo eliminar.`);
-            return;
-        }
+        if (!botIsAdmin) return;
 
-        console.log(`[ANTILINK] Eliminando mensaje...`);
-
-        // Delete message
+        // ELIMINAR PRIMERO, luego avisar
         try {
-            // bot is instance of Bot class from @imjxsx/wapi
-            // bot.ws is the underlying socket
-            await bot.ws.sendMessage(chatId, { delete: ctx.msg.key });
+            await bot.sock.sendMessage(chatId, { delete: msg.key });
+        } catch (e) { }
 
-            // Optional: Kick user
-            // await bot.ws.groupParticipantsUpdate(chatId, [sender], 'remove');
+        // Obtener número limpio para la mención
+        const userNumber = sender.split('@')[0].split(':')[0];
+        const mentionJid = `${userNumber}@s.whatsapp.net`;
 
-            await ctx.reply(`🚫 *Enlace detectado*\n@${sender.split('@')[0]}, los enlaces no están permitidos.`, { mentions: [sender] });
-        } catch (error) {
-            console.error('[ANTILINK] Error eliminando mensaje:', error);
-        }
+        await ctx.reply(styleText(`🚫 @${userNumber} los enlaces no están permitidos.`), {
+            mentions: [mentionJid]
+        });
     },
 
     async execute(ctx) {
-        console.log('[DEBUG] admin-antilink: Inicio del comando');
-
         if (!ctx.isGroup) {
-            return await ctx.reply('ꕤ Este comando solo funciona en grupos.');
+            return await ctx.reply(styleText('ꕤ Este comando solo funciona en grupos.'));
         }
 
-        const admin = await isAdmin(ctx.bot.sock, ctx.chatId, ctx.sender);
+        const admin = await isAdmin(ctx.bot, ctx.chatId, ctx.senderLid || ctx.sender);
         if (!admin) {
-            return await ctx.reply('ꕤ Solo los administradores pueden usar este comando.');
+            return await ctx.reply(styleText('ꕤ Solo los administradores pueden usar este comando.'));
         }
 
         if (!ctx.args[0] || !['on', 'off'].includes(ctx.args[0].toLowerCase())) {
-            return await ctx.reply('ꕤ Uso: */antilink* `<on/off>`');
+            return await ctx.reply(styleText('ꕤ Uso: */antilink* `<on/off>`'));
         }
 
         try {
             const enable = ctx.args[0].toLowerCase() === 'on';
             const groupData = ctx.dbService.getGroup(ctx.chatId);
-
             groupData.settings.antilink = enable;
             ctx.dbService.markDirty();
 
-            await ctx.reply(`ꕥ Antilink ${enable ? 'activado' : 'desactivado'}.`);
+            // Limpiar cache cuando cambia la config
+            botAdminCache.delete(ctx.chatId);
+
+            await ctx.reply(styleText(`ꕥ Antilink ${enable ? 'activado ✅' : 'desactivado ❌'}.`));
         } catch (error) {
-            console.error('[DEBUG] admin-antilink: Error:', error);
-            await ctx.reply('ꕤ Error al cambiar la configuración de antilink.');
+            await ctx.reply(styleText('ꕤ Error al cambiar la configuración.'));
         }
     }
 };

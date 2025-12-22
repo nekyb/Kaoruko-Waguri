@@ -1,19 +1,21 @@
-import { jadibotManager } from '../lib/jadibot.js';
+﻿import { jadibotManager } from '../lib/jadibot.js';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['qr'],
 
     async execute(ctx) {
         if (!ctx.args[0]) {
-            return await ctx.reply('ꕤ Debes proporcionar un código.\nUso: #qr <código>');
+            return await ctx.reply(styleText('ꕤ Debes proporcionar un código.\nUso: #qr <código>'));
         }
 
-        await ctx.reply('ꕤ Iniciando sub-bot, por favor espera...');
+        await ctx.reply(styleText('⏳ Iniciando sub-bot con QR, por favor espera...'));
 
-        const result = await jadibotManager.startSubbot(ctx.args[0], ctx.chatId, ctx.bot);
+        // jadibotManager requiere el socket de Baileys directamente
+        const result = await jadibotManager.startSubbot(ctx.args[0], ctx.chatId, ctx.bot.sock);
 
         if (!result.success) {
-            await ctx.reply(result.message);
+            await ctx.reply(styleText(result.message));
         }
     }
 };

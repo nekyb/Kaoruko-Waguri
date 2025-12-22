@@ -1,5 +1,5 @@
-
-import { igdl } from 'ruhend-scraper';
+﻿import { igdl } from 'ruhend-scraper';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['instagram', 'ig', 'igdl'],
@@ -7,27 +7,27 @@ export default {
     async execute(ctx) {
         try {
             if (ctx.args.length === 0) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     `ꕤ *Uso incorrecto del comando*\n\n` +
                     `Ejemplo:\n` +
-                    `✿ #instagram https://www.instagram.com/p/xxxxx\n` +
-                    `✿ #ig https://www.instagram.com/reel/xxxxx`
-                );
+                    `> #instagram https://www.instagram.com/p/xxxxx\n` +
+                    `> #ig https://www.instagram.com/reel/xxxxx`
+                ));
             }
 
             const url = ctx.args[0];
             if (!url.includes('instagram.com')) {
-                return await ctx.reply('ꕤ Por favor ingresa un link válido de Instagram.');
+                return await ctx.reply(styleText('ꕤ Por favor ingresa un link válido de Instagram.'));
             }
 
             const response = await igdl(url);
             const data = response.data;
 
             if (!data || data.length === 0) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     'ꕤ No se encontró contenido en este enlace.\n\n' +
-                    '💡 *Tip:* Verifica que el enlace sea correcto y público.'
-                );
+                    '> *Tip:* Verifica que el enlace sea correcto y público.'
+                ));
             }
 
             const media = data.sort((a, b) => {
@@ -41,16 +41,15 @@ export default {
             }
 
             await ctx.replyWithVideo(media.url, {
-                caption: `ꕥ *Instagram Downloader*\n\n` +
-                    `✿ *Resolución:* ${media.resolution || 'Desconocida'}\n` +
-                    `✿ *Link original:* ${url}`
+                caption: styleText(`ꕥ *Instagram Downloader*\n\n` +
+                    `> ✿ *Resolución* » ${media.resolution || 'Desconocida'}\n` +
+                    `> ✿ *Link original* » ${url}`)
             });
-
         } catch (error) {
             console.error('Error en comando instagram:', error);
-            await ctx.reply(
+            await ctx.reply(styleText(
                 `ꕤ Error al descargar contenido de Instagram.`
-            );
+            ));
         }
     }
 };

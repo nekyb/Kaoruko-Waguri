@@ -1,6 +1,7 @@
-
+﻿
 import axios from 'axios'
 import * as cheerio from 'cheerio'
+import { styleText } from '../lib/utils.js'
 
 class GoogleImageScraper {
     constructor() {
@@ -10,7 +11,6 @@ class GoogleImageScraper {
         }
         this.timeout = 15000
     }
-
     async search(query) {
         try {
             const params = new URLSearchParams({
@@ -19,17 +19,14 @@ class GoogleImageScraper {
                 safe: 'off',
                 hl: 'en'
             })
-
             const searchUrl = `${this.baseUrl}?${params.toString()}`
             const response = await axios.get(searchUrl, {
                 headers: this.headers,
                 timeout: this.timeout
             })
-
             const html = response.data
             const $ = cheerio.load(html)
             const images = []
-
             $('img[data-src]').each((i, el) => {
                 const src = $(el).attr('data-src')
                 if (src && src.startsWith('http') && !src.includes('google.com/xjs')) {
@@ -65,26 +62,26 @@ const googleimageCommand = {
 
     async execute(sock, msg, args) {
         const chatId = msg.key.remoteJid
-        
+
         try {
             if (args.length === 0) {
                 return await sock.sendMessage(chatId, {
-                    text: '《✧》 *Uso incorrecto del comando*\n\n' +
+                    text: styleText('《✧》 *Uso incorrecto del comando*\n\n' +
                         '📌 Ejemplos:\n' +
                         '✿ #googleimages gato\n' +
                         '✿ #gimages paisaje montaña\n' +
-                        '✿ #gimg anime'
+                        '✿ #gimg anime')
                 })
             }
 
             const query = args.join(' ')
-            
+
             const scraper = new GoogleImageScraper()
             const result = await scraper.search(query)
 
             if (!result.success || !result.images || result.images.length === 0) {
                 return await sock.sendMessage(chatId, {
-                    text: `《✧》 😔 No se encontraron imágenes para: *${query}*\n\n💡 Intenta con otros términos`
+                    text: styleText(`《✧》 😔 No se encontraron imágenes para: *${query}*\n\n💡 Intenta con otros términos`)
                 })
             }
 
@@ -92,13 +89,13 @@ const googleimageCommand = {
 
             await sock.sendMessage(chatId, {
                 image: { url: randomImage.url },
-                caption: `《✧》 🖼️ *Resultado de búsqueda*\n\n📝 Búsqueda: *${query}*`
+                caption: styleText(`《✧》 🖼️ *Resultado de búsqueda*\n\n📝 Búsqueda: *${query}*`)
             }, { quoted: msg })
 
         } catch (error) {
             console.error('Error en googleimages:', error)
             await sock.sendMessage(chatId, {
-                text: `《✧》 ❌ Error al buscar imágenes\n\n💡 Intenta de nuevo más tarde`
+                text: styleText(`《✧》 ❌ Error al buscar imágenes\n\n💡 Intenta de nuevo más tarde`)
             })
         }
     }

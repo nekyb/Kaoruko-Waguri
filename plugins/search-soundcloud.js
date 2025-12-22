@@ -1,8 +1,9 @@
-import axios from 'axios';
+﻿import axios from 'axios';
+import { styleText } from '../lib/utils.js';
 
 const SEARCH_API = 'https://api.delirius.store/search/soundcloud';
 const DOWNLOAD_API = 'https://api.delirius.store/download/soundcloud';
-const SESSION_TIMEOUT = 5 * 60 * 1000; // 5 minutos
+const SESSION_TIMEOUT = 5 * 60 * 1000;
 
 async function scSearch(query) {
     try {
@@ -28,43 +29,32 @@ async function scDownload(url) {
 async function sendSoundCloud(ctx, url) {
     const { bot, chatId, m } = ctx;
     const conn = bot?.sock;
-
     if (!conn) {
         throw new Error('Conexión no disponible');
     }
 
     try {
-        await ctx.reply('🎶 Descargando canción de SoundCloud, por favor espera...');
-
         const data = await scDownload(url);
-
-        if (!data || !data.download) {
-            return ctx.reply('⚠️ Error al obtener el enlace de audio.');
-        }
-
-        // Crear caption con datos disponibles
-        const title = data.title || 'Desconocido';
-        const author = data.author || 'Artista desconocido';
-        const link = data.link || url;
-        const caption = `🎵 *${title}*\n👤 ${author}\n🔗 ${link}`;
-
-        // Enviar imagen si está disponible
+        if (!data || !data.download) { return await ctx.reply(styleText('⚠️ Error al obtener el enlace de audio.')) }
+        const title = data.title || 'Desconocido'
+        const author = data.author || 'Artista desconocido'
+        const link = data.link || url
+        const caption = `🎵 *${title}*\n👤 ${author}\n🔗 ${link}`
         const thumb = data.image || data.author_avatar;
         if (thumb) {
             try {
                 await conn.sendMessage(chatId, {
                     image: { url: thumb },
-                    caption
+                    caption: styleText(caption)
                 });
             } catch (imgErr) {
                 console.error('Error enviando imagen:', imgErr);
-                await ctx.reply(caption);
+                await ctx.reply(styleText(caption))
             }
         } else {
-            await ctx.reply(caption);
+            await ctx.reply(styleText(caption));
         }
 
-        // Enviar archivo de audio
         await conn.sendMessage(
             chatId,
             {
@@ -88,36 +78,26 @@ export default {
     help: ['soundcloud <texto>'],
 
     async execute(ctx) {
-        const { text, prefix, command, sender } = ctx;
-
+        const { text, prefix, command, sender } = ctx
         try {
-            // Inicializar almacenamiento de sesiones
             if (!global.scsearch) {
                 global.scsearch = {};
             }
 
             if (!text) {
-                return ctx.reply(
+                return await ctx.reply(styleText(
                     `📻 *Ejemplo:* ${prefix}${command} ncs\n\nPara buscar canciones en SoundCloud.`
-                );
+                ));
             }
 
-            await ctx.reply('🔍 Buscando en SoundCloud...');
-
-            const result = await scSearch(text);
-
-            if (!result || result.length === 0) {
-                return ctx.reply('❌ No se encontraron resultados.');
-            }
-
-            // Si solo hay un resultado, descargar directamente
+            const result = await scSearch(text)
+            if (!result || result.length === 0) { return await ctx.reply(styleText('❌ No se encontraron resultados.')) }
             if (result.length === 1) {
                 const song = result[0];
                 await sendSoundCloud(ctx, song.link);
                 return;
             }
 
-            // Mostrar lista de resultados
             const list = result
                 .map((v, i) => {
                     const title = v.title || 'Sin título';
@@ -127,60 +107,40 @@ export default {
                 })
                 .join('\n\n');
 
-            await ctx.reply(
+            await ctx.reply(styleText(
                 `🎧 *Resultados de SoundCloud:*\n\n${list}\n\n` +
                 `Escribe el número *1 - ${result.length}* para descargar.`
-            );
+            ));
 
-            // Guardar resultados en sesión
-            global.scsearch[sender] = result;
-
-            // Limpiar sesión automáticamente después del timeout
+            global.scsearch[sender] = result
             setTimeout(() => {
                 if (global.scsearch[sender]) {
-                    delete global.scsearch[sender];
+                    delete global.scsearch[sender]
                 }
-            }, SESSION_TIMEOUT);
-
+            }, SESSION_TIMEOUT)
         } catch (err) {
             console.error('Error en execute:', err);
-            ctx.reply('⚠️ Ocurrió un error al buscar: ' + err.message);
+            await ctx.reply(styleText('⚠️ Ocurrió un error al buscar: ' + err.message));
         }
     },
 
     async before(ctx) {
         try {
-            const { text, sender } = ctx;
-
-            // Validar que hay texto y sesión activa
-            if (!text || !global.scsearch?.[sender]) {
-                return false;
-            }
-
+            const { text, sender } = ctx
+            if (!text || !global.scsearch?.[sender]) { return false }
             const results = global.scsearch[sender];
             const num = parseInt(text.trim());
-
-            // Validar número ingresado
-            if (isNaN(num) || num < 1 || num > results.length) {
-                return false;
-            }
-
-            // Obtener canción seleccionada
+            if (isNaN(num) || num < 1 || num > results.length) { return false }
             const song = results[num - 1];
-
-            // Limpiar sesión antes de procesar
             delete global.scsearch[sender];
-
-            // Descargar y enviar
             try {
                 await sendSoundCloud(ctx, song.link);
             } catch (err) {
                 console.error('Error enviando audio:', err);
-                await ctx.reply('❌ Error al enviar el archivo de audio.');
+                await ctx.reply(styleText('❌ Error al enviar el archivo de audio.'));
             }
 
-            return true; // Detener otros handlers
-
+            return true
         } catch (err) {
             console.error('Error in soundcloud before:', err);
             return false;

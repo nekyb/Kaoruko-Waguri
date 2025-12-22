@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['winfo', 'waifuinfo'],
     tags: ['gacha'],
@@ -7,7 +9,7 @@ export default {
         const { args, gachaService } = ctx;
 
         if (args.length === 0) {
-            return await ctx.reply('ꕤ Debes especificar el nombre del personaje.\nUso: #winfo <personaje>');
+            return await ctx.reply(styleText('ꕤ Debes especificar el nombre del personaje.\nUso: #winfo <personaje>'));
         }
 
         const query = args.join(' ').toLowerCase();
@@ -17,7 +19,7 @@ export default {
         );
 
         if (!character) {
-            return await ctx.reply('ꕤ Personaje no encontrado en la base de datos.');
+            return await ctx.reply(styleText('ꕤ Personaje no encontrado en la base de datos.'));
         }
 
         const rarity = Math.floor(parseInt(character.value || 0) / 400);
@@ -43,11 +45,11 @@ export default {
 
         if (imageUrl) {
             await ctx.replyWithImage(imageUrl, {
-                caption: message,
+                caption: styleText(message),
                 mentions: character.owner ? [character.owner] : []
             });
         } else {
-            await ctx.reply(message, {
+            await ctx.reply(styleText(message), {
                 mentions: character.owner ? [character.owner] : []
             });
         }

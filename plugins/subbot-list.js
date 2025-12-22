@@ -1,4 +1,5 @@
-import { jadibotManager } from '../lib/jadibot.js';
+﻿import { jadibotManager } from '../lib/jadibot.js';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['listjadibot', 'listbots'],
@@ -7,7 +8,7 @@ export default {
         const subbots = jadibotManager.getSubbots();
 
         if (subbots.length === 0) {
-            return await ctx.reply('ꕤ No hay sub-bots activos actualmente.');
+            return await ctx.reply(styleText('ꕤ No hay sub-bots activos actualmente.'));
         }
 
         let message = `ꕤ *Sub-Bots Activos* (${subbots.length})\n\n`;
@@ -17,7 +18,7 @@ export default {
             message += `${i + 1}. @${phoneNumber}\n`;
         });
 
-        await ctx.reply(message, {
+        await ctx.reply(styleText(message), {
             mentions: subbots.map(b => b.userId) // userId already has @s.whatsapp.net format
         });
     }

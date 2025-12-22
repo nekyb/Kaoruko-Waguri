@@ -1,3 +1,5 @@
+﻿import { styleText } from '../lib/utils.js';
+
 export default {
     commands: ['ainfo', 'animeinfo'],
     tags: ['gacha'],
@@ -44,7 +46,7 @@ export default {
         console.log('[DEBUG ainfo] Total encontrados:', charactersFromAnime.length);
 
         if (charactersFromAnime.length === 0) {
-            return await ctx.reply(`ꕤ No se encontraron personajes del anime "${text}" en el gacha.`);
+            return await ctx.reply(styleText(`ꕤ No se encontraron personajes del anime "${text}" en el gacha.`));
         }
 
         // Sort by rarity (assuming higher value = rarer)
@@ -81,6 +83,6 @@ export default {
         message += `💡 Usa #winfo <nombre> para más detalles`;
 
         console.log('[DEBUG ainfo] Enviando mensaje...');
-        await ctx.reply(message);
+        await ctx.reply(styleText(message));
     }
 };

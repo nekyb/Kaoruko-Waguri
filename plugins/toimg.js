@@ -1,4 +1,5 @@
-import sharp from 'sharp';
+﻿import sharp from 'sharp';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['toimg', 'img'],
@@ -16,11 +17,11 @@ export default {
         const isSticker = quoted?.message?.stickerMessage;
 
         if (!isSticker) {
-            return await ctx.reply('ꕤ Debes responder a un sticker.');
+            return await ctx.reply(styleText('ꕤ Debes responder a un sticker.'));
         }
 
         try {
-            await ctx.reply('⏳ Convirtiendo sticker a imagen...');
+            await ctx.reply(styleText('⏳ Convirtiendo sticker a imagen...'));
 
             // Download sticker
             const buffer = await ctx.download(quoted);
@@ -33,12 +34,12 @@ export default {
             // Send image
             await bot.sock.sendMessage(chatId, {
                 image: imgBuffer,
-                caption: 'ꕥ Aquí tienes tu imagen'
+                caption: styleText('ꕥ Aquí tienes tu imagen')
             }, { quoted: msg });
 
         } catch (error) {
             console.error('Error en toimg:', error);
-            await ctx.reply('ꕤ Error al convertir el sticker.');
+            await ctx.reply(styleText('ꕤ Error al convertir el sticker.'));
         }
     }
 };

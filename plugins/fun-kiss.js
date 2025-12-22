@@ -1,11 +1,10 @@
-import { extractMentions } from '../lib/utils.js';
-import { groupMetadataCache } from '../lib/GroupMetadataCache.js';
+﻿import { extractMentions, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['kiss', 'skiss', 'kis', 'besos', 'beso', 'besar', 'besando'],
 
     async execute(ctx) {
-        const { bot, msg, sender, from, chatId } = ctx;
+        const { msg, sender, from, chatId } = ctx;
 
         let who;
         const mentioned = extractMentions(ctx);
@@ -27,7 +26,7 @@ export default {
         } else {
             try {
                 if (chatId.endsWith('@g.us')) {
-                    const groupMetadata = await groupMetadataCache.get(bot.sock, chatId);
+                    const groupMetadata = await ctx.bot.groupMetadata(chatId);
                     const whoNumber = who.split('@')[0].split(':')[0];
 
                     const participant = groupMetadata.participants.find(p => {
@@ -49,17 +48,17 @@ export default {
             const json = await res.json();
             const { url } = json;
 
-            const str = `\`${senderName}\` está besando a \`${targetName}\``;
+            const str = styleText(`\`${senderName}\` está besando a \`${targetName}\``);
 
-            await bot.sock.sendMessage(ctx.chatId, {
+            await ctx.bot.sendMessage(chatId, {
                 image: { url: url },
                 caption: str,
                 mentions: [who]
             }, { quoted: msg });
 
         } catch (e) {
-            console.error(e);
-            await ctx.reply('ꕤ Error al obtener el beso.');
+            console.error('[Kiss] Error:', e);
+            await ctx.reply(styleText('ꕤ Error al obtener el beso.'));
         }
     }
 };

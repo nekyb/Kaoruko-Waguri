@@ -1,4 +1,5 @@
-import os from 'os';
+﻿import os from 'os';
+import { styleText } from '../lib/utils.js';
 
 function formatUptime(seconds) {
     seconds = Number(seconds);
@@ -6,7 +7,6 @@ function formatUptime(seconds) {
     const h = Math.floor(seconds % (3600 * 24) / 3600);
     const m = Math.floor(seconds % 3600 / 60);
     const s = Math.floor(seconds % 60);
-
     const dDisplay = d > 0 ? d + (d == 1 ? " día, " : " días, ") : "";
     const hDisplay = h > 0 ? h + (h == 1 ? " hora, " : " horas, ") : "";
     const mDisplay = m > 0 ? m + (m == 1 ? " minuto, " : " minutos, ") : "";
@@ -30,13 +30,13 @@ export default {
         const nodeVersion = process.version;
 
         const caption = `ꕥ *Bot Status* \n\n` +
-            `✿ *Activo:* ${uptime}\n` +
-            `✿ *RAM:* ${ramUsage} MB / ${totalRam} MB\n` +
-            `✿ *Plataforma:* ${platform}\n` +
-            `✿ *NodeJS:* ${nodeVersion}\n` +
+            `> *Activo* »${uptime}\n` +
+            `> *RAM* » ${ramUsage} MB / ${totalRam} MB\n` +
+            `> *Plataforma* » ${platform}\n` +
+            `> *NodeJS* » ${nodeVersion}\n` +
             `──────────────────\n` +
             `> _*Powered By DeltaByte*_`;
 
-        await ctx.reply(caption);
+        await ctx.reply(styleText(caption));
     }
 };

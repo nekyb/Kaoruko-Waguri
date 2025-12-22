@@ -1,5 +1,5 @@
-
-import axios from 'axios';
+﻿import axios from 'axios';
+import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['mediafire', 'mf', 'mfdl'],
@@ -9,16 +9,16 @@ export default {
 
         try {
             if (ctx.args.length === 0) {
-                return await ctx.reply(
+                return await ctx.reply(styleText(
                     `《✧》 *Uso incorrecto del comando*\n\n` +
                     `Ejemplo:\n` +
                     `✿ #mediafire https://www.mediafire.com/file/xxxxx`
-                );
+                ));
             }
 
             const url = ctx.args[0];
             if (!url.includes('mediafire.com')) {
-                return await ctx.reply('《✧》 Por favor ingresa un link válido de MediaFire.');
+                return await ctx.reply(styleText('《✧》 Por favor ingresa un link válido de MediaFire.'));
             }
             const job = await queueManager.addJob('downloads', { url, chatId: ctx.chatId });
             const apiUrl = `https://delirius-apiofc.vercel.app/download/mediafire?url=${encodeURIComponent(url)}`;
@@ -30,21 +30,21 @@ export default {
             }
 
             if (!data || !data.data || !data.data[0]) {
-                return await ctx.reply('《✧》 No se pudo obtener información del enlace.');
+                return await ctx.reply(styleText('ꕤ No se pudo obtener información del enlace.'));
             }
 
             const file = data.data[0];
             if (!file.link) {
-                return await ctx.reply('《✧》 No se pudo obtener el enlace de descarga.');
+                return await ctx.reply(styleText('ꕤ No se pudo obtener el enlace de descarga.'));
             }
 
-            const caption = `╔═══《 MEDIAFIRE 》═══╗\n` +
+            const caption = styleText(`╔═══《 MEDIAFIRE 》═══╗\n` +
                 `║\n` +
                 `║ ✦ *Nombre:* ${file.nama || 'Desconocido'}\n` +
                 `║ ✦ *Peso:* ${file.size || 'N/A'}\n` +
                 `║ ✦ *Tipo:* ${file.mime || 'N/A'}\n` +
                 `║\n` +
-                `╚═════════════════╝`;
+                `╚═════════════════╝`);
 
             const stream = await streamManager.getStream(file.link);
             const messageOptions = {
@@ -65,9 +65,9 @@ export default {
 
         } catch (error) {
             console.error('Error en comando mediafire:', error);
-            await ctx.reply(
-                `《✧》 Error al procesar el enlace de MediaFire.\n\n💡 *Tip:* Asegúrate de que el enlace de MediaFire sea válido y público.`
-            );
+            await ctx.reply(styleText(
+                `ꕤ Error al procesar el enlace de MediaFire.\n\n> *Tip:* Asegúrate de que el enlace de MediaFire sea válido y público.`
+            ));
         }
     }
 };
