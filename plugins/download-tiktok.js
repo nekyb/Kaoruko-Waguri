@@ -1,5 +1,4 @@
-﻿
-import { styleText } from '../lib/utils.js';
+﻿import { styleText } from '../lib/utils.js';
 
 export default {
     commands: ['tiktok', 'ttk', 'tt'],

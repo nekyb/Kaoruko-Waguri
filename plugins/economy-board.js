@@ -4,9 +4,7 @@ export default {
     commands: ['board', 'leaderboard', 'top', 'baltop'],
 
     async execute(ctx) {
-        // Get all users from LocalDB
         const allUsers = ctx.dbService.users.find({});
-
         const users = allUsers
             .map(data => ({
                 id: data.id,

@@ -2,25 +2,45 @@
 
 export default {
     commands: ['daily', 'diario'],
+    tags: ['economy'],
+    help: ['daily'],
 
     async execute(ctx) {
-        const userData = ctx.dbService.getUser(ctx.sender);
-        const now = Date.now();
-        const cooldown = 86400000;
-        const lastDaily = userData.economy?.lastDaily || 0;
-
-        if (now - lastDaily < cooldown) {
-            const timeLeft = Math.round((cooldown - (now - lastDaily)) / 3600000);
-            return await ctx.reply(styleText(`ꕤ Ya reclamaste tu recompensa diaria. Vuelve en *${timeLeft}* horas.`));
+        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
+            return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
         }
 
-        const reward = 1000;
+        const userData = ctx.dbService.getUser(ctx.sender);
+        const now = Date.now();
+        const COOLDOWN = 24 * 60 * 60 * 1000;
+        const lastDaily = userData.economy?.lastDaily || 0;
+        const cooldown = getCooldown(lastDaily, COOLDOWN);
+        if (cooldown > 0) {
+            return await ctx.reply(styleText(`ꕤ Ya reclamaste tu recompensa diaria.\nVuelve en: *${formatTime(cooldown)}*`));
+        }
+        const timeSinceLast = now - lastDaily;
+        const streakTimeLimit = 48 * 60 * 60 * 1000;
+        let streak = (userData.economy.dailyStreak || 0);
+        if (timeSinceLast < streakTimeLimit && lastDaily !== 0) {
+            streak += 1;
+        } else {
+            streak = 1;
+        }
+        const reward = streak * 10000;
         ctx.dbService.updateUser(ctx.sender, {
             'economy.coins': (userData.economy?.coins || 0) + reward,
-            'economy.lastDaily': now
+            'economy.lastDaily': now,
+            'economy.dailyStreak': streak
         });
         await ctx.dbService.save();
-
-        await ctx.reply(styleText(`ꕥ Recompensa diaria reclamada, obtuviste *¥${formatNumber(reward)}* coins`));
+        let message = `ꕥ *RECOMPENSA DIARIA*\n\n`;
+        message += `> Día » ¥${streak}\n`;
+        message += `> Recompensa » *¥${formatNumber(reward)}* coins\n`;
+        if (streak > 1) {
+            message += `\n_¡Mantén la racha para ganar más!_`;
+        } else if (lastDaily !== 0) {
+            message += `\n_¡Perdiste tu racha! Vuelve mañana para continuar._`;
+        }
+        await ctx.reply(styleText(message));
     }
 };

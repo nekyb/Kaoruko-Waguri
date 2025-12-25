@@ -1,5 +1,4 @@
-﻿
-import { formatNumber, styleText } from '../lib/utils.js';
+﻿import { formatNumber, styleText } from '../lib/utils.js';
 
 export default {
     commands: ['roulette', 'rt'],
@@ -12,7 +11,7 @@ export default {
         const userData = ctx.userData.economy;
 
         if (!ctx.args[0] || !ctx.args[1]) {
-            return await ctx.reply(styleText('ꕤ Uso incorrecto.\nUso: #roulette <red/black> <cantidad>'));
+            return await ctx.reply(styleText('ꕤ Uso incorrecto.\n> Uso: *#roulette* `<red/black>` `<cantidad>`'));
         }
 
         const choice = ctx.args[0].toLowerCase();

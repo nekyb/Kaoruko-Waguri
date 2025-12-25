@@ -1,60 +1,84 @@
 ﻿import { styleText } from '../lib/utils.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default {
     commands: ['resetdb', 'cleardb'],
+    tags: ['owner'],
+    help: ['resetdb (BORRA TODOS LOS DATOS)'],
 
     async execute(ctx) {
-        console.log('[DEBUG] admin-resetdb: Inicio del comando');
-        console.log('[DEBUG] admin-resetdb: sender:', ctx.sender);
+        const { sender, dbService, reply } = ctx;
 
-        // Extraer el número del sender (funciona con @s.whatsapp.net y @lid)
-        const senderNumber = ctx.sender.split('@')[0].split(':')[0];
-        const ownerNumber = '573115434166'; // Tu número de WhatsApp
-
-        console.log('[DEBUG] admin-resetdb: senderNumber:', senderNumber);
-        console.log('[DEBUG] admin-resetdb: ownerNumber:', ownerNumber);
-
-        // Solo el owner puede usar este comando
-        if (senderNumber !== ownerNumber) {
-            console.log('[DEBUG] admin-resetdb: Usuario no es owner');
-            return await ctx.reply(styleText('⛔ Solo el owner puede usar este comando.'));
+        // Verificar Owner
+        const ownerNumber = '573115434166';
+        if (!sender.includes(ownerNumber)) {
+            return await reply(styleText('⛔ Solo el owner puede usar este comando.'));
         }
 
         try {
-            console.log('[DEBUG] admin-resetdb: Iniciando reseteo de base de datos');
+            await reply(styleText('⚠️ *ADVERTENCIA*: Iniciando borrado completo de base de datos... ⚠️'));
 
-            // Contar usuarios y grupos antes de eliminar
-            const usersCount = Object.keys(ctx.dbService.users).length;
-            const groupsCount = Object.keys(ctx.dbService.groups).length;
+            // 1. Crear backup automático antes de borrar
+            const dbPath = path.join(__dirname, '..', 'database');
+            const timestamp = Date.now();
 
-            console.log('[DEBUG] admin-resetdb: Usuarios antes:', usersCount);
-            console.log('[DEBUG] admin-resetdb: Grupos antes:', groupsCount);
+            // Backup Users
+            if (fs.existsSync(path.join(dbPath, 'users.json'))) {
+                fs.copyFileSync(
+                    path.join(dbPath, 'users.json'),
+                    path.join(dbPath, `users_backup_${timestamp}.json`)
+                );
+            }
 
-            // FIX: LocalDB no usa deleteMany como Prisma
-            // Limpiar directamente los objetos
-            ctx.dbService.users = {};
-            ctx.dbService.groups = {};
+            // Backup Groups
+            if (fs.existsSync(path.join(dbPath, 'groups.json'))) {
+                fs.copyFileSync(
+                    path.join(dbPath, 'groups.json'),
+                    path.join(dbPath, `groups_backup_${timestamp}.json`)
+                );
+            }
 
-            console.log('[DEBUG] admin-resetdb: Objetos limpiados');
+            // 2. Limpiar colecciones en memoria
+            // LocalDB no tiene clear() nativo que expongamos, pero podemos resetear los objetos internos
+            // si tenemos acceso, o borrar archivo y recargar.
+            // Dado que dbService mantiene referencias, lo más seguro es:
 
-            // Marcar como dirty para guardar cambios
-            ctx.dbService.markDirty();
-            console.log('[DEBUG] admin-resetdb: Marcado como dirty');
+            // Opción B: Vaciar los datos uno por uno (lento pero seguro en memoria)
+            // Opción A (Mejor): Sobrescribir archivos con JSON vacío y recargar
 
-            // Forzar guardado inmediato
-            await ctx.dbService.save();
-            console.log('[DEBUG] admin-resetdb: Guardado forzado completado');
+            // Vamos por Opción C: Manipular arrays internos de LocalDB si fuera posible, 
+            // pero como usamos una lib externa, lo mejor es vaciar a lo bruto.
 
-            await ctx.reply(styleText(
+            // Hack para LocalDB: delete on existing keys
+            // Como no tenemos un método 'clear', simulamos borrado de archivos y reinicio de estructuras.
+
+            // Resetear estructuras en memoria del servicio
+            dbService.users.data = []; // Hack: Acceso directo a propiedad interna de LocalDB si existe
+            // O mejor, re-inicializar
+
+            fs.writeFileSync(path.join(dbPath, 'users.json'), '[]');
+            fs.writeFileSync(path.join(dbPath, 'groups.json'), '[]');
+
+            // Forzar recarga de DBService
+            await dbService.load();
+
+            // Actualizar referencias globales
+            global.db = dbService.db;
+
+            await reply(styleText(
                 `✅ *Base de datos reseteada*\n\n` +
-                `👥 Usuarios eliminados: ${usersCount}\n` +
-                `📱 Grupos eliminados: ${groupsCount}\n\n` +
-                `La base de datos está ahora vacía.`
+                `🗑️ Archivos limpiados.\n` +
+                `📦 Backup automático creado: _${timestamp}_`
             ));
+
         } catch (error) {
-            console.error('[DEBUG] admin-resetdb: Error completo:', error);
-            console.error('[DEBUG] admin-resetdb: Stack trace:', error.stack);
-            await ctx.reply(styleText('❌ Error al resetear la base de datos: ' + error.message));
+            console.error('ResetDB Error:', error);
+            await reply(styleText('❌ Error al resetear la base de datos.'));
         }
     }
 };

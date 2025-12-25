@@ -5,9 +5,7 @@ import pino from "pino";
 const logger = pino({ level: "silent" });
 
 const GEMINI_API_KEYS = [
-    "AIzaSyBt77r0sl4YDcBqQBjHIMxu9ZvbjbzVqrk",
-    "AIzaSyB147GA8T_Yw3YMChXocBL0W4qvIFYGw6o",
-    "AIzaSyDi444P77L6Xor9w8Nq1mXT-eT_7jyybGA",
+    'AIzaSyDJs3qPY5xzFYFFnNW_XwvAL1eGKSUp68s'
 ];
 
 export default {
@@ -150,14 +148,7 @@ export default {
 
 async function analyzeWithGemini(imageBuffer, prompt) {
     const models = [
-        "gemini-2.0-flash-exp",
-        "gemini-2.0-flash-thinking-exp-1219",
-        "gemini-exp-1206",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-1.5-flash",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
+        'gemini-3-pro-preview'
     ];
 
     let lastError = null;
@@ -214,43 +205,48 @@ async function analyzeWithGemini(imageBuffer, prompt) {
                 };
             } catch (error) {
                 const errorMessage = error.response?.data?.error?.message || error.message;
+                const statusCode = error.response?.status;
                 console.error(`  ✗ Falló ${modelName}: ${errorMessage}`);
                 lastError = error;
 
+                // Si es error de cuota (429), break loop de modelos y pasar a siguiente KEY
                 if (
+                    statusCode === 429 ||
                     errorMessage.includes("quota") ||
                     errorMessage.includes("rate limit") ||
-                    errorMessage.includes("429") ||
                     errorMessage.includes("RESOURCE_EXHAUSTED")
                 ) {
                     console.log(
-                        `  ⚠️  Límite alcanzado con esta API key, probando siguiente...`,
+                        `  ⚠️  Límite alcanzado con esta API key (429), probando siguiente Key...`,
                     );
-                    break;
+                    break; // Salir del loop de modelos, ir a siguiente KEY
                 }
 
+                // Si es error de modelo no encontrado (404), continue loop de modelos
                 if (
-                    errorMessage.includes("404") ||
+                    statusCode === 404 ||
                     errorMessage.includes("not found") ||
                     errorMessage.includes("does not exist")
                 ) {
                     console.log(
-                        `  ⚠️  Modelo no disponible, probando siguiente...`,
+                        `  ⚠️  Modelo no disponible, probando siguiente Modelo...`,
                     );
                     continue;
                 }
 
+                // Si es error de permisos, continue loop de modelos
                 if (
-                    errorMessage.includes("403") ||
+                    statusCode === 403 ||
                     errorMessage.includes("permission") ||
                     errorMessage.includes("PERMISSION_DENIED")
                 ) {
                     console.log(
-                        `  ⚠️  Sin permisos para este modelo, probando siguiente...`,
+                        `  ⚠️  Sin permisos, probando siguiente Modelo...`,
                     );
                     continue;
                 }
 
+                // Otros errores, continuar con siguiente modelo por si acaso
                 continue;
             }
         }
@@ -259,10 +255,11 @@ async function analyzeWithGemini(imageBuffer, prompt) {
     console.error(
         `\n❌ Todas las ${GEMINI_API_KEYS.length} API keys fallaron con todos los modelos disponibles`,
     );
-    throw (
-        lastError ||
-        new Error(
-            `Todas las ${GEMINI_API_KEYS.length} API keys de Gemini Vision fallaron. Verifica que las keys sean válidas y tengan permisos para Vision API.`,
-        )
-    );
+
+    // Si el último error fue de cuota, lanzar mensaje específico
+    if (lastError?.response?.status === 429) {
+        throw new Error("Todas las API Keys han excedido su cuota gratuita. Por favor espera unos minutos o agrega nuevas Keys.");
+    }
+
+    throw (lastError || new Error("Error desconocido al conectar con Gemini API"));
 }

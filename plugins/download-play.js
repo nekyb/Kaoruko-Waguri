@@ -5,6 +5,7 @@ import { styleText } from '../lib/utils.js';
 const tempStorage = {};
 
 const ULTRA_API_KEY = "sk_d5a5dec0-ae72-4c87-901c-cccce885f6e6";
+const MAYCOL_API_KEY = "may-0fe5c62b";
 
 export default {
     commands: ['play', 'play2'],
@@ -47,11 +48,10 @@ export default {
                 }
             } else {
                 const info = await ytMp4(userData.url);
-                const videoUrl = info?.url || info?.media?.video;
-                if (videoUrl) {
+                if (info && info.url) {
                     await bot.sock.sendMessage(chatId, {
-                        video: { url: videoUrl },
-                        caption: styleText(`⟡ *${userData.title}*`),
+                        video: { url: info.url },
+                        caption: styleText(`⟡ *${userData.title}*\n📊 Calidad: ${info.quality || '720p'}`),
                         fileName: `${cleanFileName(userData.title)}.mp4`,
                         mimetype: 'video/mp4',
                         contextInfo: {
@@ -121,6 +121,7 @@ Responde con:
         }
     }
 };
+
 async function ytMp3(url) {
     const { data } = await axios.post("https://api-sky.ultraplus.click/youtube-mp3", { url }, {
         headers: { apikey: ULTRA_API_KEY }
@@ -128,19 +129,29 @@ async function ytMp3(url) {
     if (data.status) return data.result;
     throw new Error(data.message || "Error al procesar MP3");
 }
+
 async function ytMp4(url) {
-    const { data } = await axios.post("https://api-sky.ultraplus.click/youtube-mp4/resolve",
-        { url: url, type: "video", quality: "720" },
-        { headers: { apikey: ULTRA_API_KEY } }
-    );
-    if (data.result?.media?.video) return { url: data.result.media.video };
-    if (data.url) return { url: data.url };
-    if (data.result?.url) return { url: data.result.url };
-    return data.result;
+    try {
+        const { data } = await axios.get(`https://api.soymaycol.icu/ytdl?url=${encodeURIComponent(url)}&type=mp4&apikey=${MAYCOL_API_KEY}`);
+
+        if (data.status && data.result && data.result.url) {
+            return {
+                url: data.result.url,
+                quality: data.result.quality,
+                title: data.result.title
+            };
+        }
+        throw new Error(data.message || "Error al procesar MP4");
+    } catch (error) {
+        console.error('Error en ytMp4:', error);
+        throw new Error(error.message || "Error al descargar el video");
+    }
 }
+
 function cleanFileName(name) {
     return name.replace(/[<>:"/\\|?*]/g, "").substring(0, 50);
 }
+
 function formatViews(views) {
     if (!views) return "No disponible";
     if (views >= 1e9) return (views / 1e9).toFixed(1) + "B";
