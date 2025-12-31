@@ -54,6 +54,9 @@ export class SubBotOrchestrator {
                 subBotConfig.lastActive = Date.now();
                 subBotConfig.phoneNumber = accountInfo.pn;
                 this.logger.info(`✅ Sub-bot ${sessionId} conectado (${accountInfo.pn})`);
+
+                // Configurar handler de mensajes para comandos propios
+                this.setupMessageHandler(bot, sessionId);
             });
 
             bot.on('close', async (reason) => {
@@ -85,6 +88,44 @@ export class SubBotOrchestrator {
             this.logger.error(`Error creando sub-bot: ${error.message}`);
             throw error;
         }
+    }
+
+    setupMessageHandler(bot, sessionId) {
+        bot.ws?.ev.on('messages.upsert', async ({ messages }) => {
+            for (const m of messages) {
+                if (!m.message) continue;
+
+                const chatId = m.key.remoteJid;
+                const subBot = this.subBots.get(sessionId);
+                if (!subBot) continue;
+
+                // Obtener texto del mensaje
+                const text = m.message.conversation ||
+                    m.message.extendedTextMessage?.text || '';
+
+                // Si es mensaje propio (fromMe), solo procesar si es un comando
+                if (m.key.fromMe) {
+                    const isCommand = text.startsWith('#') || text.startsWith('/') || text.startsWith('!');
+                    if (!isCommand) continue;
+                }
+
+                // Incrementar cuota
+                if (!this.incrementQuota(sessionId)) {
+                    continue;
+                }
+
+                subBot.lastActive = Date.now();
+
+                // Usar el handler global
+                if (global.messageHandler) {
+                    try {
+                        await global.messageHandler.handleMessage(bot, m, true); // true = isSubbot
+                    } catch (err) {
+                        this.logger.error(`[SubBot ${sessionId}] Handler error: ${err.message}`);
+                    }
+                }
+            }
+        });
     }
 
     async attemptReconnect(sessionId) {

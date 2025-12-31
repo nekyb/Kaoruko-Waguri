@@ -10,6 +10,8 @@ import QueueManager from './lib/QueueManager.js';
 import CacheManager from './lib/CacheManager.js';
 import TokenService from './lib/TokenService.js';
 import PrembotManager from './lib/PrembotManager.js';
+import { ShopService } from './lib/ShopService.js';
+import { LevelService } from './lib/LevelService.js';
 import { MessageHandler } from './lib/MessageHandler.js';
 import { WelcomeHandler } from './lib/WelcomeHandler.js';
 
@@ -33,6 +35,8 @@ const queueManager = new QueueManager();
 const cacheManager = new CacheManager();
 const tokenService = new TokenService();
 const prembotManager = new PrembotManager(tokenService);
+const shopService = new ShopService(dbService);
+const levelService = new LevelService(dbService);
 
 global.db = await dbService.load();
 global.dbService = dbService;
@@ -42,11 +46,13 @@ global.queueManager = queueManager;
 global.cacheManager = cacheManager;
 global.tokenService = tokenService;
 global.prembotManager = prembotManager;
+global.shopService = shopService;
+global.levelService = levelService;
 global.commandMap = new Map();
 global.beforeHandlers = [];
 
 // Initialize Handlers
-const messageHandler = new MessageHandler(dbService, gachaService, streamManager, queueManager, cacheManager);
+const messageHandler = new MessageHandler(dbService, gachaService, streamManager, queueManager, cacheManager, shopService, levelService);
 const welcomeHandler = new WelcomeHandler(dbService);
 global.messageHandler = messageHandler;
 

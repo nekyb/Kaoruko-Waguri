@@ -1,0 +1,18 @@
+[
+  {
+    "id": "120363425971920781@g.us",
+    "settings": {
+      "welcome": false,
+      "antilink": false,
+      "economy": true,
+      "nsfw": false
+    },
+    "alerts": [],
+    "stats": {
+      "messages": 0
+    },
+    "__uuid": "fe7756af-e3b1-46ba-b4e3-ad627ac43413",
+    "updatedAt": "2025-11-25T02:37:17.837Z",
+    "createdAt": "2025-11-25T02:37:17.837Z"
+  }
+]
