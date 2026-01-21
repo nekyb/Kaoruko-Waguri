@@ -17,11 +17,10 @@ import { MessageHandler } from './lib/MessageHandler.js'
 import { WelcomeHandler } from './lib/WelcomeHandler.js'
 import { setupCommandWorker } from './workers/commandWorker.js'
 
+process.env.NODE_OPTIONS = '--no-deprecation'
+
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-
-process.on('uncaughtException', err => console.error(err))
-process.on('unhandledRejection', err => console.error(err))
 
 const dbService = new DatabaseService()
 const gachaService = new GachaService()
@@ -65,7 +64,9 @@ const UUID = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713'
 const auth = new LocalAuth(UUID, 'sessions')
 const account = { jid: '', pn: '', name: '' }
 
-const bot = new Bot(UUID, auth, account)
+const bot = new Bot(UUID, auth, account, {
+  level: 'silent'
+})
 
 const pluginsDir = path.join(__dirname, 'plugins')
 const pluginFiles = fs.readdirSync(pluginsDir).filter(f => f.endsWith('.js'))
@@ -87,7 +88,11 @@ for (const file of pluginFiles) {
 }
 
 bot.on('qr', async qr => {
-  const qrText = await QRCode.toString(qr, { type: 'terminal' })
+  console.clear()
+  const qrText = await QRCode.toString(qr, {
+    type: 'terminal',
+    small: true
+  })
   console.log(qrText)
 })
 
@@ -106,9 +111,6 @@ bot.on('open', () => {
   })
 })
 
-bot.on('close', r => console.log(r))
-bot.on('error', e => console.error(e))
-
 setupCommandWorker(bot, {
   dbService,
   gachaService,
@@ -120,15 +122,5 @@ setupCommandWorker(bot, {
   shopService,
   levelService
 })
-
-const shutdown = async () => {
-  await dbService.gracefulShutdown()
-  await gachaService.gracefulShutdown()
-  await tokenService.gracefulShutdown()
-  process.exit(0)
-}
-
-process.on('SIGINT', shutdown)
-process.on('SIGTERM', shutdown)
 
 await bot.login('qr')
