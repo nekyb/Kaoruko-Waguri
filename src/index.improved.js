@@ -1,225 +1,152 @@
-import QRCode from 'qrcode';
-import { Bot, LocalAuth } from '@imjxsx/wapi';
-import Logger from '@imjxsx/logger';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { DatabaseService } from './services/DatabaseService.js';
-import { GachaService } from '../lib/GachaService.js';
-import { SubBotOrchestrator } from './services/SubBotOrchestrator.js';
-import { MessageQueue } from './services/MessageQueue.js';
-import { EconomySeason } from './services/EconomySeason.js';
-import { RateLimiter } from './services/RateLimiter.js';
-import { PluginMarketplace } from './services/PluginMarketplace.js';
+import QRCode from 'qrcode'
+import { Bot, LocalAuth } from '@imjxsx/wapi'
+import Logger from '@imjxsx/logger'
+import fs from 'fs'
+import path from 'path'
+import { fileURLToPath, pathToFileURL } from 'url'
+import { DatabaseService } from './services/DatabaseService.js'
+import { GachaService } from '../lib/GachaService.js'
+import { SubBotOrchestrator } from './services/SubBotOrchestrator.js'
+import { MessageQueue } from './services/MessageQueue.js'
+import { EconomySeason } from './services/EconomySeason.js'
+import { RateLimiter } from './services/RateLimiter.js'
+import { PluginMarketplace } from './services/PluginMarketplace.js'
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
-const logger = new Logger({ level: 'INFO' });
+const logger = new Logger({ level: 'INFO' })
 
-console.log('🚀 Iniciando Kaoruko Bot - Sistema Mejorado v2.0\n');
+const uuid = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713'
+const auth = new LocalAuth(uuid, 'sessions')
+const account = { jid: '', pn: '', name: '' }
 
-const uuid = '1f1332f4-7c2a-4b88-b4ca-bd56d07ed713';
-const auth = new LocalAuth(uuid, 'sessions');
-const account = { jid: '', pn: '', name: '' };
+const dbService = new DatabaseService()
+const gachaService = new GachaService()
+const subBotOrchestrator = new SubBotOrchestrator(dbService)
+const messageQueue = new MessageQueue()
+const economySeason = new EconomySeason(dbService)
+const rateLimiter = new RateLimiter()
+const pluginMarketplace = new PluginMarketplace(dbService)
 
-const dbService = new DatabaseService();
-const gachaService = new GachaService();
-const subBotOrchestrator = new SubBotOrchestrator(dbService);
-const messageQueue = new MessageQueue();
-const economySeason = new EconomySeason(dbService);
-const rateLimiter = new RateLimiter();
-const pluginMarketplace = new PluginMarketplace(dbService);
+await dbService.load()
+await gachaService.load()
 
-global.db = dbService.load();
-global.dbService = dbService;
-global.gachaService = gachaService;
-global.subBotOrchestrator = subBotOrchestrator;
-global.messageQueue = messageQueue;
-global.economySeason = economySeason;
-global.rateLimiter = rateLimiter;
-global.pluginMarketplace = pluginMarketplace;
-global.plugins = {};
-global.commandMap = new Map();
+global.dbService = dbService
+global.gachaService = gachaService
+global.subBotOrchestrator = subBotOrchestrator
+global.messageQueue = messageQueue
+global.economySeason = economySeason
+global.rateLimiter = rateLimiter
+global.pluginMarketplace = pluginMarketplace
+global.plugins = {}
+global.commandMap = new Map()
 
-gachaService.load();
+const botOwner = '573115434166@s.whatsapp.net'
+global.botOwner = botOwner
 
-const botOwner = '573115434166@s.whatsapp.net';
-global.botOwner = botOwner;
-
-const bot = new Bot(uuid, auth, account, logger);
+const bot = new Bot(uuid, auth, account, logger)
 
 const loadPlugins = async () => {
-    const pluginsPath = path.join(__dirname, '../plugins');
-    const files = fs.readdirSync(pluginsPath).filter(file => file.endsWith('.js'));
+  const pluginsPath = path.join(__dirname, '../plugins')
+  const files = fs.readdirSync(pluginsPath).filter(f => f.endsWith('.js'))
 
-    console.log(`ꕤ Cargando ${files.length} plugins...\n`);
+  for (const file of files) {
+    try {
+      const fileUrl = pathToFileURL(path.join(pluginsPath, file)).href
+      const module = await import(fileUrl)
+      const plugin = module.default
+      if (!plugin || typeof plugin.execute !== 'function' || !Array.isArray(plugin.commands)) continue
+      global.plugins[file] = plugin
+      for (const cmd of plugin.commands) {
+        global.commandMap.set(cmd.toLowerCase().trim(), plugin)
+      }
+    } catch {}
+  }
+}
 
-    for (const file of files) {
-        try {
-            const filePath = path.join(pluginsPath, file);
-            const module = await import(filePath);
-            const plugin = module.default;
-            
-            global.plugins[file] = plugin;
-            
-            if (plugin.commands) {
-                plugin.commands.forEach(cmd => {
-                    global.commandMap.set(cmd.toLowerCase(), plugin);
-                });
-            }
-            
-            console.log(`  ✓ ${file}`);
-        } catch (error) {
-            console.error(`  ✗ ${file}: ${error.message}`);
-        }
-    }
-    console.log('');
-};
+await loadPlugins()
 
-await loadPlugins();
+bot.on('qr', async qr => {
+  const qrText = await QRCode.toString(qr, { type: 'terminal' })
+  console.log(qrText)
+})
 
-bot.on('qr', async (qr) => {
-    qr = await QRCode.toString(qr, { type: 'terminal', small: true });
-    console.log('\n📱 Escanea el código QR para conectar:\n');
-    console.log(qr);
-    console.log('\n✨ Esperando escaneo del código QR...\n');
-});
-
-bot.on('open', (accountInfo) => {
-    bot.logger.info(`✅ Conexión exitosa! Bot @${accountInfo.name} (${accountInfo.pn}) activo`);
-});
-
-bot.on('close', (reason) => {
-    bot.logger.warn(`❌ Conexión cerrada: ${reason}`);
-});
-
-bot.on('error', (err) => {
-    bot.logger.error(`⚠️ Error: ${err.message}`);
-});
+bot.on('open', acc => {
+  bot.logger.info(`Conectado: ${acc?.name || 'Bot'}`)
+})
 
 bot.use(async (ctx, next) => {
-    try {
-        const sender = ctx.from?.jid || ctx.sender;
-        const chatId = ctx.chat?.jid || ctx.chatId;
-        
-        if (!sender || !chatId) {
-            return await next();
-        }
+  const sender = ctx.from?.jid || ctx.sender
+  const chatId = ctx.chat?.jid || ctx.chatId
+  if (!sender || !chatId) return next()
 
-        const isGroup = chatId.endsWith('@g.us');
-        
-        const userData = await dbService.getUser(sender);
-        userData.stats.messages++;
-        dbService.markDirty();
+  const isGroup = chatId.endsWith('@g.us')
+  const userData = await dbService.getUser(sender)
 
-        if (isGroup) {
-            await dbService.getGroup(chatId);
-        }
+  userData.stats = userData.stats || {}
+  userData.stats.messages = (userData.stats.messages || 0) + 1
 
-        ctx.isGroup = isGroup;
-        ctx.sender = sender;
-        ctx.chatId = chatId;
-        ctx.userData = userData;
-        ctx.dbService = dbService;
-        ctx.gachaService = gachaService;
-        ctx.db = global.db;
-        ctx.subBotOrchestrator = subBotOrchestrator;
-        ctx.economySeason = economySeason;
-        ctx.pluginMarketplace = pluginMarketplace;
+  if (isGroup) await dbService.getGroup(chatId)
 
-        await next();
-    } catch (error) {
-        bot.logger.error(`Error en middleware: ${error.message}`);
-    }
-});
+  ctx.sender = sender
+  ctx.chatId = chatId
+  ctx.isGroup = isGroup
+  ctx.userData = userData
+  ctx.dbService = dbService
+  ctx.gachaService = gachaService
+  ctx.subBotOrchestrator = subBotOrchestrator
+  ctx.economySeason = economySeason
+  ctx.pluginMarketplace = pluginMarketplace
 
-bot.command('ping', async (ctx) => {
-    await ctx.reply(`> ¡Pong! \`\`\`${bot.ping.toFixed(2)} ms\`\`\``);
-});
+  dbService.markDirty()
+  await next()
+})
 
-bot.on('message', async (ctx) => {
-    try {
-        const body = ctx.body || ctx.text || '';
-        
-        if (!body) return;
-        
-        if (!body.startsWith('#') && !body.startsWith('/')) return;
+bot.on('message', async ctx => {
+  const body = ctx.body || ctx.text || ''
+  if (!body) return
+  if (!body.startsWith('#') && !body.startsWith('/')) return
 
-        const args = body.slice(1).trim().split(/ +/);
-        const command = args.shift().toLowerCase();
+  const args = body.slice(1).trim().split(/ +/)
+  const command = args.shift().toLowerCase().trim()
 
-        const rateLimitCheck = await rateLimiter.checkCommandLimit(ctx.sender);
-        if (!rateLimitCheck.allowed) {
-            await ctx.reply(rateLimitCheck.message);
-            return;
-        }
+  const rate = await rateLimiter.checkCommandLimit(ctx.sender)
+  if (!rate.allowed) return ctx.reply(rate.message)
 
-        console.log(`ꕤ ${body[0]}${command} | ${ctx.sender.split('@')[0]}`);
+  ctx.userData.stats.commands = (ctx.userData.stats.commands || 0) + 1
+  dbService.markDirty()
 
-        if (ctx.userData) {
-            ctx.userData.stats.commands++;
-            dbService.markDirty();
-        }
+  const plugin = global.commandMap.get(command)
+  if (!plugin) return
 
-        const plugin = global.commandMap.get(command);
-        
-        if (plugin) {
-            try {
-                ctx.args = args;
-                ctx.command = command;
-                ctx.body = body;
-                
-                if (messageQueue.enabled) {
-                    await messageQueue.addCommand(ctx, plugin, command, 0);
-                } else {
-                    await plugin.execute(ctx);
-                }
-            } catch (error) {
-                console.error(`ꕤ Error ejecutando plugin:`, error);
-                await ctx.reply('ꕤ Ocurrió un error al ejecutar el comando.');
-            }
-        }
-    } catch (error) {
-        bot.logger.error(`Error procesando mensaje: ${error.message}`);
-    }
-});
+  ctx.args = args
+  ctx.command = command
+  ctx.body = body
 
-bot.on('group.participant.add', async (ctx) => {
-    try {
-        const groupId = ctx.chat?.jid;
-        if (!groupId) return;
+  if (messageQueue.enabled) {
+    await messageQueue.addCommand(ctx, plugin, command, 0)
+  } else {
+    await plugin.execute(ctx)
+  }
+})
 
-        const groupSettings = (await dbService.getGroup(groupId)).settings;
-        
-        if (groupSettings.welcome) {
-            for (const participant of ctx.participants) {
-                await bot.sock.sendMessage(groupId, {
-                    text: `ꕥ ¡Bienvenido/a @${participant.split('@')[0]} al grupo!`,
-                    mentions: [participant]
-                });
-            }
-        }
-    } catch (error) {
-        bot.logger.error(`Error en evento de grupo: ${error.message}`);
-    }
-});
+bot.on('group.participant.add', async ctx => {
+  const groupId = ctx.chat?.jid
+  if (!groupId) return
+  const group = await dbService.getGroup(groupId)
+  if (!group.settings?.welcome) return
+
+  for (const user of ctx.participants) {
+    await bot.sock.sendMessage(groupId, {
+      text: `ꕥ ¡Bienvenido/a @${user.split('@')[0]}!`,
+      mentions: [user]
+    })
+  }
+})
 
 setInterval(async () => {
-    try {
-        await messageQueue.cleanOldJobs(24);
-    } catch (error) {
-        console.error('Error limpiando trabajos antiguos:', error);
-    }
-}, 3600000);
+  await messageQueue.cleanOldJobs(24)
+}, 3600000)
 
-await bot.login('qr');
-
-console.log('\n✅ Bot iniciado correctamente');
-console.log('📊 Características activas:');
-console.log(`  • Redis Cache: ${dbService.redis ? '✓' : '✗'}`);
-console.log(`  • Message Queue: ${messageQueue.enabled ? '✓' : '✗'}`);
-console.log(`  • Sub-Bot Orchestrator: ✓`);
-console.log(`  • Economy Seasons: ✓`);
-console.log(`  • Plugin Marketplace: ✓`);
-console.log('');
+await bot.login('qr')
