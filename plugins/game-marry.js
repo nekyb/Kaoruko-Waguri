@@ -78,7 +78,7 @@ export default {
                     const groupMetadata = await ctx.bot.groupMetadata(chatId);
                     const number = getNumber(jid);
                     const participant = groupMetadata.participants.find(p =>
-                        getNumber(p.id) === number
+                        getNumber(p.id) === number || (p.lid && getNumber(p.lid) === number)
                     );
                     return participant?.notify || participant?.name || number;
                 }
@@ -99,9 +99,9 @@ export default {
         const text = `
 ꕥ *¡BODA VIRTUAL!* 
 
-👰 ${name1}
+> 👰 ${name1}
     ❤️ + 💕 + ❤️    
-🤵 ${name2}
+> 🤵 ${name2}
 
 ━━━━━━━━━━━━━
 > *Lugar* » ${ceremony}

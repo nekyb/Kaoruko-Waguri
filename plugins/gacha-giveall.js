@@ -37,7 +37,7 @@ export default {
 
         await sock.sendMessage(chatId, {
             text: styleText(`ꕥ *Regalo Masivo*\n\n` +
-                `Has regalado ${count} personajes a @${target.split('@')[0]}`),
+                `> Has regalado *${count}* personajes a @${target.split('@')[0]}`),
             mentions: [target]
         });
     }

@@ -29,26 +29,42 @@ export default {
     help: ['slut'],
 
     async execute(ctx) {
-        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
-            return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
-        }
-        const COOLDOWN = 10 * 60 * 1000;
-        const userData = ctx.userData;
-        const cooldown = getCooldown(userData.economy.lastSlut || 0, COOLDOWN);
-        if (cooldown > 0) {
-            return await ctx.reply(styleText(
-                `ꕤ Calmate, necesitas un reposo\n> Vuelve en » ${formatTime(cooldown)}`
+        try {
+            console.log('[SLUT] Starting command...');
+            if (ctx.isGroup) {
+                const groupData = await ctx.dbService.getGroup(ctx.chatId);
+                if (!groupData?.settings?.economy) {
+                    return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+                }
+            }
+
+            console.log('[SLUT] Fetching user data...');
+            const userData = await ctx.dbService.getUser(ctx.sender);
+            console.log('[SLUT] User data:', userData ? 'exists' : 'null');
+            
+            const lastSlut = userData?.economy?.lastSlut || 0;
+            const COOLDOWN = 10 * 60 * 1000;
+            const cooldown = getCooldown(lastSlut, COOLDOWN);
+            if (cooldown > 0) {
+                return await ctx.reply(styleText(
+                    `ꕤ Calmate, necesitas un reposo\n> Vuelve en » ${formatTime(cooldown)}`
+                ));
+            }
+            const REWARD = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000;
+            console.log('[SLUT] Updating user with reward:', REWARD);
+            await ctx.dbService.updateUser(ctx.sender, {
+                'economy.lastSlut': Date.now(),
+                'economy.coins': (userData?.economy?.coins || 0) + REWARD
+            });
+            const job = getRandom(SLUT_JOBS);
+            console.log('[SLUT] Sending reply...');
+            await ctx.reply(styleText(
+                `ꕥ ${job} y ganaste *¥${formatNumber(REWARD)}* coins.`
             ));
+            console.log('[SLUT] Done!');
+        } catch (error) {
+            console.error('[SLUT] ERROR:', error);
+            await ctx.reply(styleText('ꕤ Error al ejecutar el comando.'));
         }
-        const REWARD = Math.floor(Math.random() * (3000 - 1000 + 1)) + 1000;
-        ctx.dbService.updateUser(ctx.sender, {
-            'economy.lastSlut': Date.now(),
-            'economy.coins': (userData.economy.coins || 0) + REWARD
-        });
-        await dbService.save();
-        const job = getRandom(SLUT_JOBS);
-        await ctx.reply(styleText(
-            `ꕥ ${job} y ganaste *¥${formatNumber(REWARD)}* coins.`
-        ));
     }
 };

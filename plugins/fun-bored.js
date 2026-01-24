@@ -39,7 +39,8 @@ export default {
                     const whoNumber = who.split('@')[0].split(':')[0];
                     const participant = groupMetadata.participants.find(p => {
                         const participantNumber = p.id.split('@')[0].split(':')[0];
-                        return participantNumber === whoNumber;
+                        const participantLid = p.lid ? p.lid.split('@')[0].split(':')[0] : '';
+                        return participantNumber === whoNumber || participantLid === whoNumber;
                     });
 
                     targetName = participant?.notify || participant?.name || whoNumber;
@@ -49,10 +50,10 @@ export default {
             } catch (e) {
                 targetName = who.split('@')[0].split(':')[0];
             }
-            caption = styleText(`\`${senderName}\` está aburrido de \`${targetName}\` 😑🥱`);
+            caption = styleText(`\`${senderName}\` está aburrido de \`${targetName}\` (っ˕ -｡)ᶻ 𝗓 𐰁`);
             mentions = [who];
         } else {
-            caption = styleText(`\`${senderName}\` está muy aburrido... 😴🍃`);
+            caption = styleText(`\`${senderName}\` está muy aburrido... (っ˕ -｡)ᶻ 𝗓 𐰁`);
         }
 
         await ctx.replyWithVideo(randomVideo, {

@@ -9,18 +9,16 @@ export default {
 
         if (!args[0] || !['hora', 'dia', 'semana', 'mes'].includes(args[0].toLowerCase())) {
             return await ctx.reply(styleText(
-                `✘ Uso incorrecto.\nFormato correcto:\n\n` +
-                `*#antirobo hora*  (5,000 monedas - 1 hora)\n` +
-                `*#antirobo dia*   (25,000 monedas - 1 día)\n` +
-                `*#antirobo semana* (100,000 monedas - 1 semana)\n` +
-                `*#antirobo mes*   (300,000 monedas - 1 mes)`
+                `ꕤ Uso incorrecto.\nFormato correcto:\n\n` +
+                `> *#antirobo hora*  _(5,000 monedas - 1 hora)_\n` +
+                `> *#antirobo dia*   _(25,000 monedas - 1 día)_\n` +
+                `> *#antirobo semana* _(100,000 monedas - 1 semana)_\n` +
+                `> *#antirobo mes*   _(300,000 monedas - 1 mes)_`
             ));
         }
-
         const tipo = args[0].toLowerCase();
         let costo = 0;
         let duracion = 0;
-
         switch (tipo) {
             case 'hora':
                 costo = 5000;
@@ -39,23 +37,20 @@ export default {
                 duracion = 30 * 24 * 60 * 60 * 1000;
                 break;
         }
-
         if ((userData.monedas || 0) < costo) {
             return await ctx.reply(styleText(
-                `✘ No tienes suficientes monedas.\n` +
-                `Necesitas *${costo.toLocaleString()}* monedas para activar el AntiRobo por ${tipo}.`
+                `ꕤ No tienes suficientes monedas.\n` +
+                `> Necesitas *${costo.toLocaleString()}* monedas para activar el AntiRobo por ${tipo}.`
             ));
         }
-
         userData.monedas = (userData.monedas || 0) - costo;
         userData.antirobo = Date.now() + duracion;
         ctx.dbService.markDirty();
         await ctx.dbService.save();
-
         await ctx.reply(styleText(
-            `✅ *AntiRobo activado* por *${tipo}*.\n` +
-            `🛡 Tus waifus estarán protegidas hasta:\n` +
-            `*${new Date(userData.antirobo).toLocaleString()}*`
+            `ꕥ *AntiRobo activado* por *${tipo}*.\n` +
+            `> Tus waifus estarán protegidas hasta:\n` +
+            `> *${new Date(userData.antirobo).toLocaleString()}*`
         ));
     }
 };

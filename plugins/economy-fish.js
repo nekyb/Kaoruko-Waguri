@@ -119,20 +119,29 @@ export default {
     help: ['fish'],
 
     async execute(ctx) {
-        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
-            return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+        if (ctx.isGroup) {
+            const groupData = await ctx.dbService.getGroup(ctx.chatId);
+            if (!groupData?.settings?.economy) {
+                return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+            }
         }
+
+        
+        // Fetch fresh user data
+        const userData = await ctx.dbService.getUser(ctx.sender);
+        
+        const lastFish = userData.economy?.lastFish || 0;
+        const fishCaught = userData.economy?.fishCaught || 0;
+        const coins = userData.economy?.coins || 0;
+
         const COOLDOWN = 30 * 1000;
-        const userData = ctx.userData;
-        if (!userData.economy.lastFish) userData.economy.lastFish = 0;
-        if (!userData.economy.fishCaught) userData.economy.fishCaught = 0;
-        const cooldown = getCooldown(userData.economy.lastFish, COOLDOWN);
+        const cooldown = getCooldown(lastFish, COOLDOWN);
         if (cooldown > 0) {
             return await ctx.reply(styleText(
                 `🎣 El pez necesita tiempo para morder.\n> Vuelve en » ${formatTime(cooldown)}`
             ));
         }
-        ctx.dbService.updateUser(ctx.sender, { 'economy.lastFish': Date.now() });
+        await ctx.dbService.updateUser(ctx.sender, { 'economy.lastFish': Date.now() });
         const roll = Math.random() * 100;
         if (roll < 20) {
             const caught = getRandom(JUNK);
@@ -163,11 +172,11 @@ export default {
         if (modifier) {
             value = Math.floor(value * modifier.mul);
         }
-        ctx.dbService.updateUser(ctx.sender, {
-            'economy.coins': userData.economy.coins + value,
-            'economy.fishCaught': userData.economy.fishCaught + 1
+        await ctx.dbService.updateUser(ctx.sender, {
+            'economy.coins': (userData.economy?.coins || 0) + value,
+            'economy.fishCaught': (userData.economy?.fishCaught || 0) + 1
         });
-        await ctx.dbService.save();
+        // await ctx.dbService.save(); // Redundant
         const rarityDisplayMap = {
             'common': 'Común',
             'uncommon': 'Poco Común',
@@ -178,13 +187,15 @@ export default {
         };
         const rarityDisplay = rarityDisplayMap[rarity];
         const rarityColor = RARITY_COLORS[rarityDisplay.toLowerCase()] || '⚪';
+        const newFishCount = fishCaught + 1;
+        const newBalance = coins + value;
         await ctx.reply(styleText(
             `🎣 *¡ATRAPASTE ALGO!*\n\n` +
             `${itemEmoji} *${itemName}*\n` +
             `${rarityColor} Rareza: ${rarityDisplay}\n` +
             `💰 Valor: ¥${formatNumber(value)}\n\n` +
-            `🐟 Peces atrapados: ${userData.economy.fishCaught + 1}\n` +
-            `💰 Balance: ¥${formatNumber(userData.economy.coins + value)}`
+            `🐟 Peces atrapados: ${newFishCount}\n` +
+            `💰 Balance: ¥${formatNumber(newBalance)}`
         ));
     }
 };

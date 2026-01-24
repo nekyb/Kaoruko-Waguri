@@ -6,7 +6,7 @@ export default {
 
     async execute(ctx) {
         console.log('[DEBUG himages] Iniciando execute, ctx:', typeof ctx);
-        const { chatId, isGroup, bot } = ctx;
+        const { chatId, isGroup, bot, dbService } = ctx;
         console.log('[DEBUG himages] chatId:', chatId, 'isGroup:', isGroup, 'bot:', typeof bot);
         const conn = bot?.sock;
         console.log('[DEBUG himages] conn:', typeof conn);
@@ -15,9 +15,13 @@ export default {
             return await ctx.reply(styleText('❌ Error: Conexión no disponible.'));
         }
         console.log('[DEBUG himages] Verificando NSFW settings...');
-        if (isGroup && !global.db.groups[chatId]?.settings?.nsfw) {
-            console.log('[DEBUG himages] NSFW desactivado para grupo:', chatId);
-            return await ctx.reply(styleText('ꕤ Los comandos NSFW están desactivados en este grupo.'));
+        
+        if (isGroup) {
+            const groupData = await dbService.getGroup(chatId);
+            if (!groupData?.settings?.nsfw) {
+                console.log('[DEBUG himages] NSFW desactivado para grupo:', chatId);
+                return await ctx.reply(styleText('ꕤ Los comandos NSFW están desactivados en este grupo.'));
+            }
         }
         try {
             console.log('[DEBUG himages] Enviando mensaje de carga...');

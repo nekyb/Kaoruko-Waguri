@@ -5,19 +5,16 @@ export default {
 
     async execute(ctx) {
         if (!isOwner(ctx.sender, global.botOwner)) {
-            return await ctx.reply(styleText('✘ Solo el owner puede usar este comando.'));
+            return await ctx.reply(styleText('ꕤ Solo el owner puede usar este comando.'));
         }
-
         try {
             const gachaService = ctx.gachaService;
             const characters = gachaService.getAll();
 
             if (characters.length === 0) {
-                return await ctx.reply(styleText('✘ No hay waifus registradas.'));
+                return await ctx.reply(styleText('ꕤ No hay waifus registradas.'));
             }
-
             gachaService.resetAllCharacters();
-
             const users = ctx.db.users || {};
             for (const userId in users) {
                 if (users[userId].gacha && users[userId].gacha.characters) {
@@ -25,10 +22,9 @@ export default {
                 }
             }
             ctx.dbService.markDirty();
-
-            await ctx.reply(styleText('✅ Todas las waifus han sido reiniciadas. Ahora nadie las posee.'));
+            await ctx.reply(styleText('ꕤ Todas las waifus han sido reiniciadas. Ahora nadie las posee.'));
         } catch (error) {
-            await ctx.reply(styleText(`✘ Error: ${error.message}`));
+            await ctx.reply(styleText(`ꕤ Error: ${error.message}`));
         }
     }
 };

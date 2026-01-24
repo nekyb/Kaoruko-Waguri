@@ -1,33 +1,74 @@
-﻿import fs from 'fs';
+﻿import axios from 'axios';
+import fs from 'fs';
 
 export default {
     commands: ['help', 'menu'],
 
     async execute(ctx) {
-        const senderNumber = ctx.sender.split('@')[0];
-        const username = ctx.from?.name || senderNumber;
-        const tokenService = ctx.tokenService;
-        const userId = ctx.senderPhone ? `${ctx.senderPhone}@s.whatsapp.net` : ctx.sender;
-        const prembotConfig = tokenService?.getPrembotConfig?.(userId);
-        const botName = prembotConfig?.customName || 'Hatsune Miku';
-        let menuImage = './images/menu.jpg';
-        if (prembotConfig?.customImage && fs.existsSync(prembotConfig.customImage)) {
-            menuImage = prembotConfig.customImage;
-        }
-        const userCount = ctx.dbService?.getUserCount?.() || 0;
+        try {
+            const senderNumber = ctx.sender.split('@')[0];
+            const username = ctx.from?.name || senderNumber;
 
-        const helpText = `╭─────── ୨୧ ───────╮
+            // Detectar si es un prembot y cargar configuración personalizada
+            const tokenService = ctx.tokenService;
+            // Usar el ID del bot actual, no del remitente, para cargar la config correcta
+            const botId = ctx.bot.sock.user?.id?.split(':')[0] || ctx.bot.sock.user?.id;
+            const userId = botId ? `${botId}@s.whatsapp.net` : ctx.sender;
+            const prembotConfig = tokenService?.getPrembotConfig?.(userId);
+            
+            const botName = prembotConfig?.customName || 'Hatsune Miku';
+            // Imagen por defecto
+            let menuImage = 'https://files.catbox.moe/v5w1h6.jpg'; 
+            
+            if (prembotConfig?.customImage) {
+                menuImage = prembotConfig.customImage;
+            }
+            
+            const userCount = (await ctx.dbService?.getUserCount?.()) || 0;
+
+            // Obtener argumento (sección solicitada) - usar ctx.args directamente
+            const section = ctx.args[0]?.toLowerCase();
+
+            // Mapeo de secciones en inglés/español
+            const sectionMap = {
+                'economia': 'economy',
+                'economy': 'economy',
+                'gacha': 'gacha',
+                'descargas': 'downloads',
+                'downloads': 'downloads',
+                'buscadores': 'search',
+                'search': 'search',
+                'utilidades': 'utilities',
+                'utilities': 'utilities',
+                'utils': 'utilities',
+                'diversion': 'fun',
+                'diversión': 'fun',
+                'fun': 'fun',
+                'juegos': 'games',
+                'games': 'games',
+                'subbot': 'subbot',
+                'nsfw': 'nsfw',
+                'admin': 'admin',
+                'administracion': 'admin',
+                'administración': 'admin'
+            };
+
+            const requestedSection = sectionMap[section];
+
+            // Secciones del menú
+            const sections = {
+                header: `╭─────── ୨୧ ───────╮
 │  Bot Name › *${botName}*
 │  Hola, *${username}*
 │  ¿Listo para empezar?
 ╰─── ⚐ DeltaByte ─────╯
-│ ✦ Canal    › whatsapp.com/channel/0029VbB9SA10rGiQvM2DMi2p
+│ ✦ Canal    › https://whatsapp.com/channel/0029VbByI3uL7UVYZD00xF2B
 │ ✦ Usuarios › *${userCount}*
-│ ✦ v2.9     › Usuario: ${username}
-╰────────────────╯
+│ ✦ v3.3     › Usuario: ${username}
+╰────────────────╯`,
 
- ⊹ *Economía⊹ ࣪ ˖*
-✎ \`G𝖺𝗇𝖺 𝗆𝗈𝗇𝖾𝖽𝖺𝗌, 𝖺𝗉𝗎𝖾𝗌𝗍𝖺 𝗒 𝗃𝗎é𝗀𝖺𝗍𝖾𝗅𝖺\`
+                economy: `*╭─⊹ Economía⊹ ࣪ ˖ 𐔌՞. .՞𐦯──╮*
+> ✎ \`Gana monedas, apuesta y juégatela\`
 ✿ *::* *#economy* \`<on/off>\`
 > » Desactiva o activa el sistema de economía.
 ✿ *::* *#balance* • *#bal*
@@ -76,10 +117,10 @@ export default {
 > » Mira tu nivel y XP actual.
 ✿ *::* *#blackjack* • *#bj* \`<apuesta>\`
 > » Juega al 21 contra la casa.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Gacha⊹ ࣪ ˖*
-✎ \`C𝗈𝗅𝖾𝖼𝖼𝗂𝗈𝗇𝖺 𝗐𝖺𝗂𝖿𝗎𝗌 𝖾 𝗂𝗇𝗍𝖾𝗋𝖼𝖺𝗆𝖻𝗂𝖺𝗅𝗈𝗌\`
+                gacha: `*╭─⊹ Gacha⊹ ࣪ ˖ (˶˃ ᵕ ˂˶)──╮*
+> ✎ \`Colecciona waifus e intercámbialos\`
 ✿ *::* *#claim* • *#c*
 > » Reclama una waifu aleatoria.
 ✿ *::* *#harem* • *#miswaifu*
@@ -120,10 +161,10 @@ export default {
 > » Intercambia personajes con otro usuario.
 ✿ *::* *#wcow*
 > » Mira la información de tus waifus.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Descargas⊹ ࣪ ˖*
-✎ \`D𝖾𝗌𝖼𝖺𝗋𝗀𝖺 𝖼𝗈𝗇𝗍𝖾𝗇𝗂𝖽𝗈 𝖽𝖾 𝗉𝗅𝖺𝗍𝖺𝖿𝗈𝗋𝗆𝖺𝗌\`
+                downloads: `*╭─⊹ Descargas⊹ ࣪ ˖ 𐔌՞. .՞𐦯──╮*
+> ✎ \`Descarga contenido de plataformas\`
 ✿ *::* *#ig* \`<link>\`
 > » Descarga un video de Instagram.
 ✿ *::* *#tiktok* \`<link>\`
@@ -140,10 +181,10 @@ export default {
 > » Descarga video de YouTube.
 ✿ *::* *#fb* \`<link>\`
 > » Descarga un video de Facebook.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Buscadores⊹ ࣪ ˖*
-✎ \`E𝗇𝖼𝗎𝖾𝗇𝗍𝗋𝖺 𝗅𝗈 𝗊𝗎𝖾 𝗇𝖾𝖼𝖾𝗌𝗂𝗍𝖺𝗌 𝖾𝗇 𝗅𝖺 𝗐𝖾𝖻\`
+                search: `*╭─⊹ Buscadores⊹ ࣪ ˖ (╭ರ_•́)──╮*
+> ✎ \`Busca en plataformas algun contenido que desees\`
 ✿ *::* *#googleimages* • *#gimg* \`<texto>\`
 > » Busca imágenes en Google.
 ✿ *::* *#pinterest* \`<texto>\`
@@ -162,10 +203,10 @@ export default {
 > » Busca letras de canciones.
 ✿ *::* *#apk* • *#modapk* \`<texto>\`
 > » Busca y descarga aplicaciones APK.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Utilidades⊹ ࣪ ˖*
-✎ \`C𝗈𝗆𝖺𝗇𝖽𝗈𝗌 ú𝗍𝗂𝗅𝖾𝗌\`
+                utilities: `*╭─⊹ Utilidades⊹ ࣪ ˖ ꉂ(˵˃ ᗜ ˂˵)──╮*
+> ✎ \`Comandos útiles\`
 ✿ *::* *#ping* • *#p*
 > » Calcula la velocidad del bot.
 ✿ *::* *#ai* • *#ia* \`<texto>\`
@@ -210,10 +251,10 @@ export default {
 > » Establece tu fecha de nacimiento.
 ✿ *::* *#setgen* \`<m/f>\`
 > » Establece tu género.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Diversión⊹ ࣪ ˖*
-✎ \`C𝗈𝗆𝖺𝗇𝖽𝗈𝗌 𝗉𝖺𝗋𝖺 𝗂𝗇𝗍𝖾𝗋𝖺𝖼𝗍𝗎𝖺𝗋\`
+                fun: `*╭─⊹ Diversión⊹ ࣪ ˖ ꉂ(˵˃ ᗜ ˂˵)──╮*
+> ✎ \`Comandos para interactuar\`
 ✿ *::* *#sleep* \`<@user>\`
 > » Duerme o toma una siesta con alguien.
 ✿ *::* *#hug* \`<@user>\`
@@ -234,10 +275,10 @@ export default {
 > » Expresa tu aburrimiento.
 ✿ *::* *#coffee* \`<@user>\`
 > » Toma café solo o acompañado.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Juegos⊹ ࣪ ˖*
-✎ \`D𝗂𝗏𝗂é𝗋𝗍𝖾𝗍𝖾 𝖼𝗈𝗇 𝖾𝗌𝗍𝗈𝗌 𝗆𝗂𝗇𝗂𝗃𝗎𝖾𝗀𝗈𝗌\`
+                games: `*╭─⊹ Juegos⊹ ࣪ ˖ ꉂ(˵˃ ᗜ ˂˵)──╮*
+> ✎ \`Diviértete con estos minijuegos\`
 ✿ *::* *#tictactoe* • *#ttt* \`<@user>\`
 > » Juega al gato (tres en raya).
 ✿ *::* *#math*
@@ -262,10 +303,10 @@ export default {
 > » Hazle una pregunta de verdad a alguien.
 ✿ *::* *#marry* • *#casar* \`<@user>\`
 > » Matrimonio virtual con alguien.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *Subbot⊹ ࣪ ˖*
-✎ \`C𝗈𝗇𝗏𝗂𝖾𝗋𝗍𝖾 𝗍𝗎 𝗇ú𝗆𝖾𝗋𝗈 𝖾𝗇 𝗎𝗇 𝖻𝗈𝗍\`
+                subbot: `*╭─⊹ Subbot⊹ ࣪ ˖ (˶ᵔ ᵕ ᵔ˶)──╮*
+> ✎ \`Convierte tu número en un bot\`
 ✿ *::* *#code*
 > » Obtén un código de 8 dígitos para vincular tu número.
 ✿ *::* *#qr* \`<código>\`
@@ -274,20 +315,26 @@ export default {
 > » Muestra las opciones para convertirte en subbot.
 ✿ *::* *#stopbot*
 > » Detén tu subbot vinculado.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+*╰────────────────╯*`,
 
- ⊹ *NSFW⊹ ࣪ ˖*
-✎ \`C𝗈𝗇𝗍𝖾𝗇𝗂𝖽𝗈 𝗉𝖺𝗋𝖺 𝖺𝖽𝗎𝗅𝗍𝗈𝗌\`
+                nsfw: `*╭─⊹ NSFW⊹ ࣪ ˖ (,,•᷄‎ࡇ•᷅ ,,)?──╮*
+> ✎ \`Contenido para adultos\`
 ✿ *::* *#hbikini*
 > » Imágenes de chicas en bikini.
 ✿ *::* *#himages*
 > » Imágenes hentai aleatorias.
 ✿ *::* *#pornvideo*
 > » Videos porno aleatorios.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*
+✿ *::* *#fuck* \`<mention>\`
+> » Viola a alguien.
+✿ *::* *#pajawoman* \`<mention>\`
+> » Hazte una paja sola o con alguien.
+✿ *::* *#showtits* \`<mention>\`
+> » Muestra las tetas a alguien.
+*╰────────────────╯*`,
 
- ⊹ *Administración⊹ ࣪ ˖*
-✎ \`A𝖽𝗆𝗂𝗇𝗂𝗌𝗍𝗋𝖺 𝗍𝗎 𝗀𝗋𝗎𝗉𝗈 𝗒/𝗈 𝖼𝗈𝗆𝗎𝗇𝗂𝖽𝖺𝖽\`
+                admin: `*╭─⊹ Administración⊹ ࣪ ˖ ꉂ(˵˃ ᗜ ˂˵)──╮*
+> ✎ \`Administra tu grupo y/o comunidad\`
 ⟡ *::* *#kick* \`<@user>\`
 > » Expulsa a alguien del grupo.
 ✿ *::* *#ban* \`<@user>\`
@@ -314,29 +361,79 @@ export default {
 > » Información del grupo y estado de sistemas.
 ✿ *::* *#join* • *#invite* \`<link>\`
 > » Une al bot a un grupo por link.
-*⊱⋅ ────── ⊹ ────── ⋅⊰*`;
+*╰────────────────╯*`
+            };
 
-        try {
-            try {
-                await ctx.bot.sendMessage(ctx.chatId, {
-                    text: helpText,
-                    contextInfo: {
-                        externalAdReply: {
-                            title: "Hatsune Miku",
-                            body: "Developed By Soblend Development Studio",
-                            thumbnail: "https://files.catbox.moe/o6v8ne.jpg",
-                            mediaType: 1,
-                            sourceUrl: "https://bright-light.pages.dev",
-                            renderLargerThumbnail: true
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error('[DEBUG] Error sending help with metadata:', error);
-                ctx.reply(helpText);
+            // Construir el texto según la sección solicitada
+            let helpText = '';
+
+            if (requestedSection && sections[requestedSection]) {
+                // Mostrar solo la sección solicitada (SIN header)
+                helpText = `${sections[requestedSection]}
+
+💡 *Tip:* Usa \`#menu\` para ver todas las categorías disponibles.
+
+*Otras categorías:*
+economia, gacha, descargas, buscadores, utilidades, diversion, juegos, subbot, nsfw, admin`;
+            } else if (section && !requestedSection) {
+                // Sección no válida
+                helpText = `❌ *Sección no encontrada:* \`${section}\`
+
+*Categorías disponibles:*
+- economia / economy
+- gacha
+- descargas / downloads
+- buscadores / search
+- utilidades / utilities
+- diversion / fun
+- juegos / games
+- subbot
+- nsfw
+- admin / administracion
+
+💡 *Ejemplo:* \`#menu economia\` o \`#menu economy\``;
+            } else {
+                // Mostrar menú completo
+                helpText = `${sections.header}
+
+${sections.economy}
+
+${sections.gacha}
+
+${sections.downloads}
+
+${sections.search}
+
+${sections.utilities}
+
+${sections.fun}
+
+${sections.games}
+
+${sections.subbot}
+
+${sections.nsfw}
+
+${sections.admin}`;
             }
+
+            // Enviar mensaje con thumbnail
+            await ctx.bot.sendMessage(ctx.chatId, {
+                text: helpText,
+                contextInfo: {
+                    externalAdReply: {
+                        title: botName,
+                        body: "Developed By Soblend Development Studio",
+                        thumbnailUrl: menuImage, // Now uses the dynamic image (default or custom)
+                        mediaType: 1,
+                        sourceUrl: "https://bright-light.pages.dev",
+                        renderLargerThumbnail: true
+                    }
+                }
+            });
         } catch (error) {
             console.error('[DEBUG] Error sending help with metadata:', error);
+            // Fallback: enviar sin imagen
             ctx.reply(helpText);
         }
     }

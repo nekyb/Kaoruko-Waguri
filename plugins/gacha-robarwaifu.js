@@ -8,7 +8,7 @@ export default {
         const userData = ctx.userData;
 
         if (!args[0]) {
-            return await ctx.reply(styleText('✘ Debes proporcionar el ID de la waifu que quieres robar.\n\nEjemplo:\n*#robarwaifu id123*'));
+            return await ctx.reply(styleText('ꕤ Debes proporcionar el ID de la waifu que quieres robar.\n\nEjemplo:\n*#robarwaifu id123*'));
         }
 
         try {
@@ -16,7 +16,7 @@ export default {
             const waifuId = args[0];
             const waifu = gachaService.getById(waifuId);
             if (!waifu) {
-                return await ctx.reply(styleText(`✘ No se encontró ninguna waifu con el ID: *${waifuId}*`));
+                return await ctx.reply(styleText(`ꕤ No se encontró ninguna waifu con el ID: *${waifuId}*`));
             }
 
             const oldOwner = waifu.user;
@@ -33,7 +33,7 @@ export default {
 
             if ((ownerData.antirobo || 0) > Date.now()) {
                 return await ctx.reply(styleText(
-                    `🛡 La waifu *${waifu.name}* (ID: ${waifu.id}) tiene AntiRobo activo.\n` +
+                    `ꕤ La waifu *${waifu.name}* (ID: ${waifu.id}) tiene AntiRobo activo.\n` +
                     `No puedes robarla hasta: *${new Date(ownerData.antirobo).toLocaleString()}*`
                 ));
             }

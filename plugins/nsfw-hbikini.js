@@ -14,8 +14,11 @@ export default {
             return await ctx.reply(styleText('❌ Error: Conexión no disponible.'));
         }
 
-        if (isGroup && !global.db.groups[chatId]?.settings?.nsfw) {
-            return await ctx.reply(styleText('ꕤ Los comandos NSFW están desactivados en este grupo.'));
+        if (isGroup) {
+            const groupData = await ctx.dbService.getGroup(chatId);
+            if (!groupData?.settings?.nsfw) {
+                return await ctx.reply(styleText('ꕤ Los comandos NSFW están desactivados en este grupo.'));
+            }
         }
 
         try {

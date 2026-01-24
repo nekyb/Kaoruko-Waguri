@@ -55,7 +55,7 @@ export default {
 
             await ctx.reply(styleText(
                 `ꕥ *Regalo Enviado*\n\n` +
-                `Has regalado a *${transferredChar.name}* (ID: ${transferredChar.id}) a @${target.split('@')[0]}`),
+                `> Has regalado a *${transferredChar.name}* (ID: ${transferredChar.id}) a @${target.split('@')[0]}`),
                 { mentions: [target] }
             );
         } catch (error) {

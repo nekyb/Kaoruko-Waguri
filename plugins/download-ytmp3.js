@@ -1,15 +1,5 @@
-﻿import axios from 'axios';
+﻿import { y2mateDirect } from '../lib/scraper-y2mate.js';
 import { styleText } from '../lib/utils.js';
-
-const ULTRA_API_KEY = "sk_d5a5dec0-ae72-4c87-901c-cccce885f6e6";
-
-async function ytMp3(url) {
-    const { data } = await axios.post("https://api-sky.ultraplus.click/youtube-mp3", { url }, {
-        headers: { apikey: ULTRA_API_KEY }
-    });
-    if (data.status) return data.result;
-    throw new Error(data.message || "Error al procesar MP3");
-}
 
 export default {
     commands: ['ytmp3', 'yta', 'audio'],
@@ -29,25 +19,26 @@ export default {
         await ctx.reply(styleText('ꕥ Procesando tu audio, por favor espera...'));
 
         try {
-            const info = await ytMp3(ctx.args[0]);
+            const result = await y2mateDirect(ctx.args[0], { type: 'audio', quality: 128 });
 
-            if (info && info.media && info.media.audio) {
+            if (result.status && result.url) {
+                const { title, url } = result;
+                
                 const caption = styleText(
                     `⋆.˚*YOUTUBE AUDIO*\n\n` +
-                    `> Título » ${info.title}\n` +
-                    `> Canal » ${info.author?.name || 'Desconocido'}\n` +
-                    `> Duración » ${info.duration || 'N/A'}`
+                    `> Título » ${title || 'Desconocido'}\n` +
+                    `> Calidad » 128kbps`
                 );
 
                 await ctx.bot.sendMessage(ctx.chatId, {
-                    audio: { url: info.media.audio },
+                    audio: { url: url },
                     mimetype: 'audio/mpeg',
-                    fileName: `${info.title.replace(/[\/\\:*?"<>|]/g, '_')}.mp3`,
+                    fileName: `${(title || 'audio').replace(/[\/\\:*?"<>|]/g, '_')}.mp3`,
                     contextInfo: {
                         externalAdReply: {
-                            title: info.title,
-                            body: info.author?.name || 'YouTube',
-                            thumbnailUrl: info.cover || '',
+                            title: title || 'Audio',
+                            body: 'YouTube',
+                            thumbnailUrl: '', // Scraper doesn't return thumbnail
                             sourceUrl: ctx.args[0],
                             mediaType: 1,
                             renderLargerThumbnail: true
@@ -55,7 +46,7 @@ export default {
                     }
                 }, { quoted: ctx.msg });
             } else {
-                throw new Error('No se pudo obtener el enlace de descarga.');
+                throw new Error(result.error || 'No se pudo obtener el enlace de descarga.');
             }
 
         } catch (error) {

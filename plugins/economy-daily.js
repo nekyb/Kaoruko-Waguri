@@ -6,11 +6,14 @@ export default {
     help: ['daily'],
 
     async execute(ctx) {
-        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
-            return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+        if (ctx.isGroup) {
+            const groupData = await ctx.dbService.getGroup(ctx.chatId);
+            if (!groupData?.settings?.economy) {
+                return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+            }
         }
 
-        const userData = ctx.dbService.getUser(ctx.sender);
+        const userData = await ctx.dbService.getUser(ctx.sender);
         const now = Date.now();
         const COOLDOWN = 24 * 60 * 60 * 1000;
         const lastDaily = userData.economy?.lastDaily || 0;
@@ -20,19 +23,23 @@ export default {
         }
         const timeSinceLast = now - lastDaily;
         const streakTimeLimit = 48 * 60 * 60 * 1000;
-        let streak = (userData.economy.dailyStreak || 0);
+        let streak = (userData.economy?.dailyStreak || 0);
         if (timeSinceLast < streakTimeLimit && lastDaily !== 0) {
             streak += 1;
         } else {
             streak = 1;
         }
+
         const reward = streak * 10000;
-        ctx.dbService.updateUser(ctx.sender, {
+        await ctx.dbService.updateUser(ctx.sender, {
             'economy.coins': (userData.economy?.coins || 0) + reward,
             'economy.lastDaily': now,
             'economy.dailyStreak': streak
         });
-        await ctx.dbService.save();
+        // DatabaseService.save is a no-op for MongoDB but harmless if awaited, though redundant.
+        // We will keep it if it's there for compatibility or remove if not needed.
+        // Given updateUser saves, we can probably remove it or keep it await-ed.
+        // await ctx.dbService.save(); // Removed as updateUser handles persistence
         let message = `ꕥ *RECOMPENSA DIARIA*\n\n`;
         message += `> Día » ¥${streak}\n`;
         message += `> Recompensa » *¥${formatNumber(reward)}* coins\n`;

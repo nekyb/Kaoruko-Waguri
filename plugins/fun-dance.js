@@ -6,15 +6,10 @@ export default {
     async execute(ctx) {
         const { msg, sender, from, chatId } = ctx;
         const gifs = [
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/hfutvpxzvdi.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/p9izkugbu1i.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/fnzm57qpqnc.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/mm97bjc3mje.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/gk8c62rnufu.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/o0k98t209ki.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/x8lh8rwdukj.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/7rj4grg17wq.gif',
-            'https://rogddqelmxyuvhpjvxbf.supabase.co/storage/v1/object/public/files/dzq78cxu7ts.gif'
+            'https://soblend-api.drexelxx.workers.dev/storage/cc359f94-f2d5-45d9-9c7b-c4a4e4689aa9.mp4',
+            'https://soblend-api.drexelxx.workers.dev/storage/32fe3f9f-712c-48d8-ac76-974616f4698e.mp4',
+            'https://soblend-api.drexelxx.workers.dev/storage/932b21ba-2372-420c-8eae-f2823dd9ace8.mp4',
+            'https://soblend-api.drexelxx.workers.dev/storage/3d6218f2-14db-4cac-ab65-0eb9189b7224.mp4'
         ];
 
         const randomGif = gifs[Math.floor(Math.random() * gifs.length)];
@@ -39,7 +34,8 @@ export default {
                     const whoNumber = who.split('@')[0].split(':')[0];
                     const participant = groupMetadata.participants.find(p => {
                         const participantNumber = p.id.split('@')[0].split(':')[0];
-                        return participantNumber === whoNumber;
+                        const participantLid = p.lid ? p.lid.split('@')[0].split(':')[0] : '';
+                        return participantNumber === whoNumber || participantLid === whoNumber;
                     });
 
                     targetName = participant?.notify || participant?.name || whoNumber;
@@ -49,10 +45,10 @@ export default {
             } catch (e) {
                 targetName = who.split('@')[0].split(':')[0];
             }
-            caption = styleText(`\`${senderName}\` está bailando con \`${targetName}\` 💃🕺`);
+            caption = styleText(`\`${senderName}\` está bailando con \`${targetName}\` 〜⁠(⁠꒪⁠꒳⁠꒪⁠)⁠〜`);
             mentions = [who];
         } else {
-            caption = styleText(`\`${senderName}\` está bailando alegrementee 🎶`);
+            caption = styleText(`\`${senderName}\` está bailando alegrementee 〜⁠(⁠꒪⁠꒳⁠꒪⁠)⁠〜`);
         }
 
         await ctx.replyWithVideo(randomGif, {

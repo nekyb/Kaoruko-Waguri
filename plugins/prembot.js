@@ -12,7 +12,7 @@ export default {
                 `ꕥ *PREMBOT - Sub-Bot Premium*\n\n` +
                 `*Comandos disponibles:*\n\n` +
                 `> *#prembot buy*\n` +
-                `>   Comprar token ($2 USD)\n\n` +
+                `>   Comprar token ($13 USD)\n\n` +
                 `> *#prembot TOKEN-XXXX*\n` +
                 `>   Vincular con tu token\n\n` +
                 `> *#prembot status*\n` +
@@ -23,13 +23,31 @@ export default {
             ));
         }
 
+
+        
+        if (subCommand === 'generate' && args[1] === 'token') {
+            if (!ctx.isOwner) {
+                return await ctx.reply(styleText('❌ No tienes permiso para usar este comando.'));
+            }
+            const tokenService = ctx.tokenService;
+            const token = tokenService.createToken(ctx.sender, '30d');
+            
+            await ctx.reply(
+                styleText(`ꕥ *Token Generado*\n\n` +
+                `> *ID* » `) + `\`${token.id}\`` + styleText(`\n` +
+                `> *Duración* » 30 días\n\n` +
+                `> _Usa #prembot_ `) + token.id + styleText(` _para activar_`)
+            );
+            return;
+        }
+
         if (subCommand === 'buy') {
             const tokenService = ctx.tokenService;
 
             if (!tokenService?.paypal?.clientId) {
                 return await ctx.reply(styleText(
                     `ꕥ *PREMBOT - Comprar Token*\n\n` +
-                    `> *Precio:* $2 USD\n` +
+                    `> *Precio:* $13 USD\n` +
                     `> *Duración:* 30 días\n\n` +
                     `*Métodos de pago:*\n\n` +
                     `> *PayPal:* paypal.me/\n\n` +
@@ -45,23 +63,23 @@ export default {
                 const userId = ctx.senderPhone ? `${ctx.senderPhone}@s.whatsapp.net` : ctx.sender;
                 const result = await tokenService.createPayPalOrder(userId);
                 if (result.success) {
-                    await ctx.reply(styleText(
-                        `ꕥ *PREMBOT - Pago PayPal*\n\n` +
-                        `> *Precio* » *$2 USD*\n` +
-                        `> *Order* » ${result.orderId}\n\n` +
+                    await ctx.reply(
+                        styleText(`ꕥ *PREMBOT - Pago PayPal*\n\n` +
+                        `> *Precio* » *$13 USD*\n` +
+                        `> *Order* » `) + result.orderId + styleText(`\n\n` +
                         `*Haz clic para pagar:*\n` +
-                        `> ${result.approvalUrl}\n\n` +
+                        `> `) + result.approvalUrl + styleText(`\n\n` +
                         `*> Después de pagar:*\n` +
-                        `> Envía "#prembot verify ${result.orderId}"\n\n` +
-                        `> _El enlace expira en 3 horas_`
-                    ));
+                        `> Envía "#prembot verify `) + result.orderId + styleText(`"\n\n` +
+                        `> _El enlace expira en 3 horas_`)
+                    );
                 } else {
                     await ctx.reply(styleText(`❌ Error: ${result.error}`));
                 }
             } catch (error) {
                 await ctx.reply(styleText(
                     `ꕥ *PREMBOT - Comprar Token*\n\n` +
-                    `> *Precio* » $2 USD\n\n` +
+                    `> *Precio* » $13 USD\n\n` +
                     `> PayPal no está configurado.\n` +
                     `> Contacta al owner para comprar.`
                 ));
@@ -76,14 +94,14 @@ export default {
                 const result = await tokenService.capturePayPalOrder(orderId);
                 if (result.success) {
                     const payment = tokenService.getPayment(orderId);
-                    await ctx.reply(styleText(
-                        `ꕥ *Pago verificado*\n\n` +
-                        `> *Tu Token* » \n` +
-                        `\`${payment.tokenId}\`\n\n` +
+                    await ctx.reply(
+                        styleText(`ꕥ *Pago verificado*\n\n` +
+                        `> *Tu Token* » \n`) +
+                        `\`${payment.tokenId}\`` + styleText(`\n\n` +
                         `*Ahora ejecuta:*\n` +
-                        `> #prembot ${payment.tokenId}\n\n` +
-                        `> _El token es válido por 30 días_`
-                    ));
+                        `> #prembot `) + payment.tokenId + styleText(`\n\n` +
+                        `> _El token es válido por 30 días_`)
+                    );
                 } else {
                     await ctx.reply(styleText(`ꕤ Pago no completado » ${result.error || 'Verifica que hayas pagado'}`));
                 }

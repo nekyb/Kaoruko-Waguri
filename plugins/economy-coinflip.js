@@ -2,7 +2,6 @@
 
 export default {
     commands: ['coinflip', 'cf'],
-
     async execute(ctx) {
         if (ctx.args.length < 2) {
             return await ctx.reply(styleText('ꕤ Uso: */coinflip* `<cantidad>` `<cara/cruz>`'));
@@ -15,23 +14,23 @@ export default {
         if (!['cara', 'cruz'].includes(choice)) {
             return await ctx.reply(styleText('ꕤ Debes elegir cara o cruz.'));
         }
-        const userData = ctx.dbService.getUser(ctx.sender);
+        const userData = await ctx.dbService.getUser(ctx.sender);
         if ((userData.economy?.coins || 0) < amount) {
             return await ctx.reply(styleText('ꕤ No tienes suficientes coins.'));
         }
         const result = Math.random() < 0.5 ? 'cara' : 'cruz';
         const won = result === choice;
         if (won) {
-            ctx.dbService.updateUser(ctx.sender, {
+            await ctx.dbService.updateUser(ctx.sender, {
                 'economy.coins': (userData.economy?.coins || 0) + amount
             });
-            await ctx.dbService.save();
+            // await ctx.dbService.save();
             await ctx.reply(styleText(`ꕥ ¡Salió *${result}*! Ganaste *¥${formatNumber(amount)}* coins.`));
         } else {
-            ctx.dbService.updateUser(ctx.sender, {
+            await ctx.dbService.updateUser(ctx.sender, {
                 'economy.coins': (userData.economy?.coins || 0) - amount
             });
-            await ctx.dbService.save();
+            // await ctx.dbService.save();
             await ctx.reply(styleText(`ꕤ Salió *${result}*. Perdiste *¥${formatNumber(amount)}* coins.`));
         }
     }

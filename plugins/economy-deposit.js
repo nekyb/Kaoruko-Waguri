@@ -7,7 +7,7 @@ export default {
         if (ctx.args.length === 0) {
             return await ctx.reply(styleText('ꕤ Uso: *#deposit* <cantidad|all>'));
         }
-        const userData = ctx.dbService.getUser(ctx.sender);
+        const userData = await ctx.dbService.getUser(ctx.sender);
         const economy = userData.economy || {};
         let amount;
         if (ctx.args[0].toLowerCase() === 'all') {

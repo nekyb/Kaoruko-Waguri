@@ -1,6 +1,8 @@
 import { styleText } from '../lib/utils.js';
 import fs from 'fs';
 import path from 'path';
+import { downloadMediaMessage } from 'baileys';
+import { CatboxService } from '../lib/CatboxService.js';
 
 export default {
     commands: ['setnamesubbot', 'setimagesubbot', 'configbot', 'miconfig'],
@@ -55,47 +57,45 @@ export default {
         // Comando: /setimagesubbot (con imagen citada o adjunta)
         if (command === 'setimagesubbot') {
             const msg = ctx.msg;
-            let imageMessage = null;
-
-            // Verificar si hay imagen adjunta
-            if (msg.message?.imageMessage) {
-                imageMessage = msg.message.imageMessage;
-            }
-            // Verificar si está citando un mensaje con imagen
-            else if (msg.message?.extendedTextMessage?.contextInfo?.quotedMessage?.imageMessage) {
-                imageMessage = msg.message.extendedTextMessage.contextInfo.quotedMessage.imageMessage;
-            }
-
-            if (!imageMessage) {
-                return await ctx.reply(styleText(
-                    `ꕥ *Establecer Imagen del Menú*\n\n` +
-                    `*Uso:*\n` +
-                    `> Enviar imagen con #setimagesubbot\n` +
-                    `> O citar una imagen con #setimagesubbot\n\n` +
-                    `> _La imagen aparecerá en el menú /help_`
-                ));
-            }
-
             try {
-                // Crear directorio para el prembot si no existe
-                const prembotDir = path.join(process.cwd(), 'prembots', userId.split('@')[0]);
-                if (!fs.existsSync(prembotDir)) {
-                    fs.mkdirSync(prembotDir, { recursive: true });
+                const quotedContent = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+                const quoted = quotedContent ? { message: quotedContent } : null;
+                const isImage = msg.message?.imageMessage || quoted?.message?.imageMessage;
+
+                if (!isImage) {
+                    return await ctx.reply(styleText(
+                        `ꕥ *Establecer Imagen del Menú*\n\n` +
+                        `*Uso:*\n` +
+                        `> Enviar imagen con #setimagesubbot\n` +
+                        `> O citar una imagen con #setimagesubbot\n\n` +
+                        `> _La imagen aparecerá en el menú /help_`
+                    ));
                 }
 
-                const imagePath = path.join(prembotDir, 'menu.jpg');
+                await ctx.reply(styleText('⏳ Descargando y subiendo imagen...'));
 
-                // Descargar la imagen
-                const buffer = await ctx.download({ message: { imageMessage } });
-                fs.writeFileSync(imagePath, buffer);
+                const messageToDownload = quoted || msg;
+                const buffer = await downloadMediaMessage(
+                    messageToDownload,
+                    'buffer',
+                    {},
+                    { 
+                        logger: console,
+                        reuploadRequest: ctx.bot.sock.updateMediaMessage
+                    }
+                );
 
-                // Guardar ruta en configuración
-                const result = tokenService.setPrembotImage(userId, imagePath);
+                // Subir a Catbox
+                const url = await CatboxService.upload(buffer);
+
+                // Guardar URL en configuración
+                const result = tokenService.setPrembotImage(userId, url);
 
                 if (result.success) {
                     return await ctx.reply(styleText(
                         `✅ *Imagen del Menú Establecida*\n\n` +
                         `> La imagen se ha guardado correctamente.\n\n` +
+                        `> URL: ${url}\n` +
                         `> _Usa #help para verificar el cambio_`
                     ));
                 } else {
@@ -104,7 +104,7 @@ export default {
 
             } catch (error) {
                 console.error('[Prembot Config] Error:', error);
-                return await ctx.reply(styleText(`❌ Error al guardar la imagen: ${error.message}`));
+                return await ctx.reply(styleText(`❌ Error al procesar la imagen: ${error.message}`));
             }
         }
 

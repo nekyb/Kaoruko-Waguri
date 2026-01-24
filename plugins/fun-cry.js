@@ -35,7 +35,8 @@ export default {
 
                     const participant = groupMetadata.participants.find(p => {
                         const participantNumber = p.id.split('@')[0].split(':')[0];
-                        return participantNumber === whoNumber;
+                        const participantLid = p.lid ? p.lid.split('@')[0].split(':')[0] : '';
+                        return participantNumber === whoNumber || participantLid === whoNumber;
                     });
 
                     targetName = participant?.notify || participant?.name || whoNumber;
@@ -56,9 +57,9 @@ export default {
         // Build message
         let str;
         if (who !== sender) {
-            str = styleText(`\`${senderName}\` está llorando por culpa de \`${targetName}\`.`);
+            str = styleText(`\`${senderName}\` está llorando por culpa de \`${targetName}\` (╥﹏╥).`);
         } else {
-            str = styleText(`\`${senderName}\` está llorando.`);
+            str = styleText(`\`${senderName}\` está llorando (╥﹏╥).`);
         }
 
         // Videos

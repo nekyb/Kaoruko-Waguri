@@ -15,7 +15,7 @@ export default {
         try {
             // Obtener metadata del grupo
             const groupMetadata = await bot.groupMetadata(chatId);
-            const groupData = dbService.getGroup(chatId);
+            const groupData = await dbService.getGroup(chatId);
             const settings = groupData?.settings || {};
 
             // Iconos de estado

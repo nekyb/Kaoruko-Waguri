@@ -36,26 +36,40 @@ export default {
 
         if (who && who !== sender) {
             let targetName;
+            // Primero intentar obtener nombre de la base de datos (si existe y tiene nombre)
             try {
-                if (chatId.endsWith('@g.us')) {
-                    const groupMetadata = await ctx.bot.groupMetadata(chatId);
-                    const whoNumber = who.split('@')[0].split(':')[0];
-                    const participant = groupMetadata.participants.find(p => {
-                        const participantNumber = p.id.split('@')[0].split(':')[0];
-                        return participantNumber === whoNumber;
-                    });
+                if (ctx.dbService) {
+                    const userDb = await ctx.dbService.getUser(who);
+                    if (userDb && userDb.name) {
+                        targetName = userDb.name;
+                    }
+                }
+            } catch (e) {}
 
-                    targetName = participant?.notify || participant?.name || whoNumber;
-                } else {
+            if (!targetName) {
+                try {
+                    if (chatId.endsWith('@g.us')) {
+                        const groupMetadata = await ctx.bot.groupMetadata(chatId);
+                        const whoNumber = who.split('@')[0].split(':')[0];
+                        const participant = groupMetadata.participants.find(p => {
+                            const participantNumber = p.id.split('@')[0].split(':')[0];
+                            const participantLid = p.lid ? p.lid.split('@')[0].split(':')[0] : '';
+                            return participantNumber === whoNumber || participantLid === whoNumber;
+                        });
+
+                        const pPhone = participant.id.split('@')[0].split(':')[0];
+                        targetName = participant?.notify || participant?.name || pPhone;
+                    } else {
+                        targetName = who.split('@')[0].split(':')[0];
+                    }
+                } catch (e) {
                     targetName = who.split('@')[0].split(':')[0];
                 }
-            } catch (e) {
-                targetName = who.split('@')[0].split(':')[0];
             }
-            caption = styleText(`\`${senderName}\` está tomando café con \`${targetName}\` ☕✨`);
+            caption = styleText(`\`${senderName}\` está tomando café con \`${targetName}\` (っ˘ڡ˘ς)`);
             mentions = [who];
         } else {
-            caption = styleText(`\`${senderName}\` está disfrutando de un café ☕🍃`);
+            caption = styleText(`\`${senderName}\` está disfrutando de un café (っ˘ڡ˘ς)`);
         }
 
         await ctx.replyWithVideo(randomVideo, {

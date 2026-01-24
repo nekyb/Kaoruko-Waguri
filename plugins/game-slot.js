@@ -6,10 +6,12 @@ export default {
     category: 'economy',
 
     async execute(ctx) {
-        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
+        const group = await ctx.dbService.getGroup(ctx.chatId);
+        if (ctx.isGroup && !group.settings.economy) {
             return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
         }
-        const userData = ctx.userData.economy;
+        const user = await ctx.dbService.getUser(ctx.sender);
+        const userData = user.economy || {};
         let amount = parseInt(ctx.args[0]);
         if (!amount || isNaN(amount) || amount <= 0) {
             return await ctx.reply(styleText('ꕤ Uso: #slot <cantidad>\n> Ejemplo: * #slot* 100'));

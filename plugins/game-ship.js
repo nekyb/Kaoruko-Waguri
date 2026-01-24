@@ -42,6 +42,24 @@ export default {
         const num1 = getNumber(person1);
         const num2 = getNumber(person2);
 
+        // Resolve names
+        const getName = async (jid) => {
+            try {
+                if (chatId.endsWith('@g.us')) {
+                    const groupMetadata = await ctx.bot.groupMetadata(chatId);
+                    const number = getNumber(jid);
+                    const participant = groupMetadata.participants.find(p =>
+                        getNumber(p.id) === number || (p.lid && getNumber(p.lid) === number)
+                    );
+                    return participant?.notify || participant?.name || number;
+                }
+            } catch (e) { }
+            return getNumber(jid);
+        };
+
+        const name1 = await getName(person1);
+        const name2 = await getName(person2);
+
         // Simular aleatoriedad basada en los números pero que sea consistente por día
         const today = new Date().toISOString().slice(0, 10);
         const seed = parseInt(num1.slice(-4)) + parseInt(num2.slice(-4)) + today.split('-').reduce((a, b) => parseInt(a) + parseInt(b), 0);
@@ -58,9 +76,9 @@ export default {
         const text = `
 💕 *SHIP - Compatibilidad*
 
-👤 @${num1}
+👤 ${name1}
 ❤️ + 
-👤 @${num2}
+👤 ${name2}
 
 ${progressBar(percentage)}
 

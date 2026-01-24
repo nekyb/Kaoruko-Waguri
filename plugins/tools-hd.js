@@ -71,15 +71,25 @@ export default {
 
     async execute(ctx) {
         const { msg, bot, quoted } = ctx;
+        
+        // Logic adapted from sticker.js to correctly handle quoted messages
+        const quotedContent = msg.message?.extendedTextMessage?.contextInfo?.quotedMessage;
+        const quotedMsg = quotedContent ? { message: quotedContent } : null;
+        
         const isImage = msg.message?.imageMessage;
-        const isQuotedImage = quoted?.message?.imageMessage;
+        const isQuotedImage = quotedContent?.imageMessage;
+
         if (!isImage && !isQuotedImage) {
             return await ctx.reply(styleText('ꕤ Por favor responde a una imagen o envía una imagen con el comando.'));
         }
+
         try {
             await ctx.reply(styleText('ꕤ Mejorando calidad de imagen... (esto puede tardar unos segundos)'));
+            
+            const messageToDownload = quotedMsg || msg;
+            
             const buffer = await downloadMediaMessage(
-                quoted ? quoted : msg,
+                messageToDownload,
                 'buffer',
                 {},
                 {

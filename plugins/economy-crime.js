@@ -48,12 +48,18 @@ export default {
     commands: ['crime', 'crimen', 'rob'],
 
     async execute(ctx) {
-        if (ctx.isGroup && !ctx.dbService.getGroup(ctx.chatId).settings.economy) {
-            return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+        if (ctx.isGroup) {
+            const groupData = await ctx.dbService.getGroup(ctx.chatId);
+            if (!groupData?.settings?.economy) {
+                return await ctx.reply(styleText('ꕤ El sistema de economía está desactivado en este grupo.'));
+            }
         }
-        const userData = ctx.userData;
-        if (!userData.economy) userData.economy = {};
-        const lastCrime = userData.economy.lastCrime || 0;
+
+        
+        // Fetch fresh user data
+        const userData = await ctx.dbService.getUser(ctx.sender);
+        
+        const lastCrime = userData.economy?.lastCrime || 0;
         const cooldown = getCooldown(lastCrime, COOLDOWN_TIME);
         if (cooldown > 0) {
             return await ctx.reply(styleText(
@@ -73,11 +79,11 @@ export default {
         let message = '';
         if (roll <= successChance) {
             const successMsg = SUCCESS_MESSAGES[Math.floor(Math.random() * SUCCESS_MESSAGES.length)];
-            ctx.dbService.updateUser(ctx.sender, {
+            await ctx.dbService.updateUser(ctx.sender, {
                 'economy.coins': (userData.economy.coins || 0) + finalReward,
                 'economy.lastCrime': Date.now()
             });
-            await ctx.dbService.save();
+            // await ctx.dbService.save(); // Redundant
             message = styleText(
                 `🔫 *¡CRIMEN EXITOSO!*\n\n` +
                 `> Actividad » ${crimeName}\n` +
@@ -90,11 +96,11 @@ export default {
             const fine = Math.floor(finalReward * 0.2);
             const currentCoins = userData.economy.coins || 0;
             const lostAmount = Math.min(currentCoins, fine);
-            ctx.dbService.updateUser(ctx.sender, {
+            await ctx.dbService.updateUser(ctx.sender, {
                 'economy.coins': currentCoins - lostAmount,
                 'economy.lastCrime': Date.now()
             });
-            await ctx.dbService.save();
+            // await ctx.dbService.save(); // Redundant
             message = styleText(
                 `🚔 *¡TE ATRAPARON!*\n\n` +
                 `> Actividad » ${crimeName}\n` +
